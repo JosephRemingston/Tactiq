@@ -1,0 +1,56 @@
+name: touchline
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: touchline
+      POSTGRES_PASSWORD: touchline
+      POSTGRES_DB: touchline
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U touchline"]
+      interval: 5s
+      retries: 20
+  redis:
+    image: redis:8-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    ports: ["6380:6379"]   # host 6379 is often taken by a local Redis
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 20
+  # Optional local S3-compatible store, only for STORAGE_DRIVER=s3 experiments: docker compose --profile s3 up -d
+  # (the project uses Neon Object Storage; local development uses STORAGE_DRIVER=fs via .env.docker).
+  s3:
+    profiles: ["s3"]
+    image: chrislusf/seaweedfs:latest
+    command: ["server", "-dir=/data", "-s3", "-s3.port=8333", "-s3.config=/etc/seaweedfs/s3.json", "-volume.max=20", "-master.volumeSizeLimitMB=256"]
+    ports: ["8333:8333"]
+    volumes:
+      - s3data:/data
+      - ./docker/seaweedfs-s3.json:/etc/seaweedfs/s3.json:ro
+  api:
+    profiles: ["app"]
+    build: { context: ., target: runtime }
+    command: ["node", "dist/main.js"]
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgres://touchline:touchline@postgres:5432/touchline
+      REDIS_URL: redis://redis:6379
+    ports: ["3000:3000"]
+    depends_on: { postgres: { condition: service_healthy }, redis: { condition: service_healthy } }
+  worker:
+    profiles: ["app"]
+    build: { context: ., target: runtime }
+    command: ["node", "dist/worker.js"]
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgres://touchline:touchline@postgres:5432/touchline
+      REDIS_URL: redis://redis:6379
+    depends_on: { postgres: { condition: service_healthy }, redis: { condition: service_healthy } }
+volumes:
+  pgdata: {}
+  redisdata: {}
+  s3data: {}

@@ -1,0 +1,500 @@
+[
+ {
+  "key": "possession",
+  "name": "Possession",
+  "category": "in-possession",
+  "simpleText": "How much of the ball a team has.",
+  "exploreText": "Possession share is usually measured from passes or time on the ball. Having more of the ball does not guarantee more chances.",
+  "advancedText": "Touchline uses pass-based possession: a team's attempted passes divided by all attempted passes.",
+  "misconceptions": "More possession means a team played better.",
+  "relatedKeys": [
+   "build-up",
+   "possession-chain"
+  ],
+  "linkedMetricKeys": [
+   "possession.share"
+  ]
+ },
+ {
+  "key": "possession-chain",
+  "name": "Possession chain",
+  "category": "in-possession",
+  "simpleText": "One spell on the ball, from winning it to losing it.",
+  "exploreText": "A chain links every action a team makes until the opponent takes the ball, play stops for a change of possession, or the half ends.",
+  "advancedText": "Chains follow the provider's possession number; a chain's end type is shot, goal, turnover, out, foul or half end.",
+  "misconceptions": null,
+  "relatedKeys": [
+   "possession",
+   "transition"
+  ],
+  "linkedMetricKeys": [
+   "possession.chains_count",
+   "possession.avg_chain_passes"
+  ]
+ },
+ {
+  "key": "build-up",
+  "name": "Build-up",
+  "category": "in-possession",
+  "simpleText": "How a team moves the ball out from the back.",
+  "exploreText": "Teams can build up patiently with short passes through defenders and midfielders, or go long to skip the press.",
+  "advancedText": "Build-up success = share of own-third possessions that reach the final third.",
+  "misconceptions": "Long balls are always a sign of poor build-up.",
+  "relatedKeys": [
+   "high-press",
+   "progressive-pass",
+   "line-breaking-pass"
+  ],
+  "linkedMetricKeys": [
+   "buildup.success_rate",
+   "possession.avg_chain_passes"
+  ]
+ },
+ {
+  "key": "progressive-pass",
+  "name": "Progressive pass",
+  "category": "in-possession",
+  "simpleText": "A pass that moves the ball a lot closer to the opponent's goal.",
+  "exploreText": "A progressive pass gains a meaningful amount of ground towards goal. The distance needed is larger in your own half than near the opponent's box.",
+  "advancedText": "Touchline v1: completed open-play pass reducing distance to goal centre by >= 30 m (own half), >= 15 m (crossing halves) or >= 10 m (opponent half).",
+  "misconceptions": "Every forward pass is progressive.",
+  "relatedKeys": [
+   "line-breaking-pass",
+   "build-up"
+  ],
+  "linkedMetricKeys": [
+   "progression.progressive_passes",
+   "progression.progressive_carries"
+  ]
+ },
+ {
+  "key": "line-breaking-pass",
+  "name": "Line-breaking pass",
+  "category": "in-possession",
+  "simpleText": "A pass that goes past a line of opposing players.",
+  "exploreText": "Line-breaking passes skip a defensive or midfield line, putting the receiver behind those opponents.",
+  "advancedText": "Detecting lines reliably needs player positions (freeze frames or tracking); Touchline will add this with tracking data.",
+  "misconceptions": null,
+  "relatedKeys": [
+   "progressive-pass",
+   "half-space"
+  ],
+  "linkedMetricKeys": []
+ },
+ {
+  "key": "half-space",
+  "name": "Half-space",
+  "category": "space",
+  "simpleText": "The channels between the centre and the wings.",
+  "exploreText": "The pitch can be split into five vertical lanes. The two between the centre and the wings are the half-spaces, hard to defend because they sit between full-backs and centre-backs.",
+  "advancedText": "Touchline lanes are 13.6 m wide across a 68 m pitch: wide left, half-space left, central, half-space right, wide right.",
+  "misconceptions": null,
+  "relatedKeys": [
+   "wide-channel",
+   "zone-14",
+   "overload"
+  ],
+  "linkedMetricKeys": [
+   "progression.by_lane",
+   "possession.xt_by_lane"
+  ]
+ },
+ {
+  "key": "wide-channel",
+  "name": "Wide channel",
+  "category": "space",
+  "simpleText": "The strips of pitch along the touchlines.",
+  "exploreText": "Teams use the wide channels to stretch the opponent and deliver crosses or cut-backs.",
+  "advancedText": "Outermost 13.6 m lanes on each side.",
+  "misconceptions": null,
+  "relatedKeys": [
+   "half-space",
+   "overload"
+  ],
+  "linkedMetricKeys": [
+   "progression.by_lane"
+  ]
+ },
+ {
+  "key": "zone-14",
+  "name": "Zone 14",
+  "category": "space",
+  "simpleText": "The central area just outside the penalty box.",
+  "exploreText": "Getting the ball into zone 14 lets a team shoot, play through balls or combine around the box.",
+  "advancedText": "Touchline v1: x in [70, 87.5) m, y in [22.67, 45.33) m on a 105 x 68 m pitch.",
+  "misconceptions": null,
+  "relatedKeys": [
+   "half-space",
+   "final-third"
+  ],
+  "linkedMetricKeys": [
+   "progression.zone14_receptions"
+  ]
+ },
+ {
+  "key": "final-third",
+  "name": "Final third",
+  "category": "space",
+  "simpleText": "The attacking third of the pitch.",
+  "exploreText": "Entering the final third is a basic step towards creating chances.",
+  "advancedText": "x >= 70 m on a 105 m pitch.",
+  "misconceptions": null,
+  "relatedKeys": [
+   "box-entry",
+   "zone-14"
+  ],
+  "linkedMetricKeys": [
+   "possession.final_third_entries"
+  ]
+ },
+ {
+  "key": "box-entry",
+  "name": "Box entry",
+  "category": "in-possession",
+  "simpleText": "Getting the ball into the opponent's penalty area.",
+  "exploreText": "Box entries count possessions where the ball reached the penalty area through a pass, carry or touch.",
+  "advancedText": "Penalty area: x >= 88.5 m, 13.84 <= y <= 54.16 m.",
+  "misconceptions": null,
+  "relatedKeys": [
+   "final-third",
+   "xg"
+  ],
+  "linkedMetricKeys": [
+   "possession.box_entries"
+  ]
+ },
+ {
+  "key": "overload",
+  "name": "Overload",
+  "category": "space",
+  "simpleText": "Having more players than the opponent in one area.",
+  "exploreText": "Overloads create a free player. Teams often overload one side to then switch play to the other.",
+  "advancedText": "Measuring numerical superiority needs player positions; Touchline infers side preference from progression and xT lanes until tracking arrives.",
+  "misconceptions": null,
+  "relatedKeys": [
+   "half-space",
+   "wide-channel"
+  ],
+  "linkedMetricKeys": [
+   "progression.by_lane"
+  ]
+ },
+ {
+  "key": "high-press",
+  "name": "High press",
+  "category": "out-of-possession",
+  "simpleText": "Trying to win the ball back near the opponent's goal.",
+  "exploreText": "A pressing team closes down defenders and the goalkeeper to force mistakes high up the pitch.",
+  "advancedText": "Event proxies: low PPDA, many high turnovers and a high average defensive-action height.",
+  "misconceptions": "Pressing high always means winning the ball high.",
+  "relatedKeys": [
+   "mid-block",
+   "low-block",
+   "ppda",
+   "counterpress"
+  ],
+  "linkedMetricKeys": [
+   "pressing.ppda",
+   "pressing.high_turnovers",
+   "pressing.defensive_action_height_m"
+  ]
+ },
+ {
+  "key": "mid-block",
+  "name": "Mid-block",
+  "category": "out-of-possession",
+  "simpleText": "Defending from the middle of the pitch.",
+  "exploreText": "A mid-block lets the opponent have the ball in their own half, then engages around halfway.",
+  "advancedText": "Typically moderate PPDA and a middling defensive-action height.",
+  "misconceptions": null,
+  "relatedKeys": [
+   "high-press",
+   "low-block"
+  ],
+  "linkedMetricKeys": [
+   "pressing.defensive_action_height_m"
+  ]
+ },
+ {
+  "key": "low-block",
+  "name": "Low block",
+  "category": "out-of-possession",
+  "simpleText": "Defending deep, close to your own goal.",
+  "exploreText": "A low block protects space behind the defence and in front of goal, accepting less of the ball.",
+  "advancedText": "Usually high PPDA, few high turnovers, low defensive-action height.",
+  "misconceptions": "A low block is purely defensive; many low-block teams are dangerous on the counter.",
+  "relatedKeys": [
+   "mid-block",
+   "transition"
+  ],
+  "linkedMetricKeys": [
+   "pressing.ppda",
+   "pressing.defensive_action_height_m"
+  ]
+ },
+ {
+  "key": "ppda",
+  "name": "PPDA",
+  "category": "metric",
+  "simpleText": "Passes per defensive action: how many passes the opponent makes before you try to win the ball.",
+  "exploreText": "Lower PPDA usually means more aggressive pressing.",
+  "advancedText": "Touchline v1: opponent passes in their own 60% / tackles + interceptions + fouls in that area.",
+  "misconceptions": "PPDA from different sites is directly comparable.",
+  "relatedKeys": [
+   "high-press"
+  ],
+  "linkedMetricKeys": [
+   "pressing.ppda",
+   "pressing.ppda_incl_pressures"
+  ]
+ },
+ {
+  "key": "counterpress",
+  "name": "Counterpress",
+  "category": "transition",
+  "simpleText": "Pressing immediately after losing the ball.",
+  "exploreText": "Instead of retreating, players attack the ball straight away to win it back before the opponent organises.",
+  "advancedText": "Touchline measures regains within 3, 5 and 8 seconds of losing possession.",
+  "misconceptions": null,
+  "relatedKeys": [
+   "transition",
+   "high-press",
+   "rest-defence"
+  ],
+  "linkedMetricKeys": [
+   "transition.counterpress_regains",
+   "transition.counterpress_regain_rate"
+  ]
+ },
+ {
+  "key": "rest-defence",
+  "name": "Rest defence",
+  "category": "transition",
+  "simpleText": "The players a team keeps back while attacking.",
+  "exploreText": "Rest defence protects against counter-attacks when the ball is lost.",
+  "advancedText": "Assessing rest defence structure needs tracking data (Milestone 4).",
+  "misconceptions": null,
+  "relatedKeys": [
+   "counterpress",
+   "transition"
+  ],
+  "linkedMetricKeys": []
+ },
+ {
+  "key": "transition",
+  "name": "Transition",
+  "category": "transition",
+  "simpleText": "The moments right after the ball changes teams.",
+  "exploreText": "Transitions are when teams are least organised, so fast attacks and quick regains matter.",
+  "advancedText": "Touchline links transition metrics to possession chains and play patterns.",
+  "misconceptions": null,
+  "relatedKeys": [
+   "counterpress",
+   "rest-defence"
+  ],
+  "linkedMetricKeys": [
+   "transition.counter_shots",
+   "transition.regain_to_shot_seconds"
+  ]
+ },
+ {
+  "key": "xg",
+  "name": "Expected goals (xG)",
+  "category": "metric",
+  "simpleText": "How likely a shot is to be a goal.",
+  "exploreText": "xG rates each chance from 0 to 1 using its location, angle, body part and situation. Summing xG shows how many goals a team's chances were worth.",
+  "advancedText": "Touchline shows the provider's xG model (StatsBomb). Single-match differences between goals and xG are noisy.",
+  "misconceptions": "xG predicts the result of a single match.",
+  "relatedKeys": [
+   "xa",
+   "xt"
+  ],
+  "linkedMetricKeys": [
+   "shooting.xg",
+   "shooting.npxg",
+   "shooting.xg_per_shot"
+  ]
+ },
+ {
+  "key": "xa",
+  "name": "Expected assists (xA)",
+  "category": "metric",
+  "simpleText": "The xG of the shots a pass created.",
+  "exploreText": "xA credits the passer with the quality of the chance they set up.",
+  "advancedText": "Sum of xG of shots whose key pass was by the player.",
+  "misconceptions": null,
+  "relatedKeys": [
+   "xg"
+  ],
+  "linkedMetricKeys": []
+ },
+ {
+  "key": "xt",
+  "name": "Expected threat (xT)",
+  "category": "metric",
+  "simpleText": "How much a pass or dribble increased the chance of scoring soon.",
+  "exploreText": "xT values each pitch area by how often having the ball there leads to a goal. Moving the ball to a more valuable area adds threat.",
+  "advancedText": "Static 12x8 grid by Karun Singh; action value = xT(end) - xT(start).",
+  "misconceptions": "xT measures shot quality (that is xG).",
+  "relatedKeys": [
+   "xg",
+   "progressive-pass"
+  ],
+  "linkedMetricKeys": [
+   "possession.xt_added",
+   "possession.xt_by_lane"
+  ]
+ },
+ {
+  "key": "formation",
+  "name": "Formation",
+  "category": "shape",
+  "simpleText": "The basic shape a team lines up in, such as 4-3-3.",
+  "exploreText": "Formations change in and out of possession and after substitutions; they are a starting point, not the whole story.",
+  "advancedText": "Recorded from Starting XI and Tactical Shift events.",
+  "misconceptions": "A team's formation stays fixed all match.",
+  "relatedKeys": [
+   "inverted-fullback",
+   "double-pivot",
+   "false-nine"
+  ],
+  "linkedMetricKeys": [
+   "shape.starting_formation",
+   "shape.formation_timeline"
+  ]
+ },
+ {
+  "key": "inverted-fullback",
+  "name": "Inverted full-back",
+  "category": "roles",
+  "simpleText": "A full-back who moves into midfield when the team has the ball.",
+  "exploreText": "Instead of overlapping on the wing, the full-back steps inside to add a midfielder and protect against counters.",
+  "advancedText": "Role profile archetype 'inverted fullback' uses central involvement and passing volume from a full-back position.",
+  "misconceptions": null,
+  "relatedKeys": [
+   "formation",
+   "rest-defence"
+  ],
+  "linkedMetricKeys": [
+   "player.role_profile"
+  ]
+ },
+ {
+  "key": "false-nine",
+  "name": "False nine",
+  "category": "roles",
+  "simpleText": "A centre-forward who drops into midfield.",
+  "exploreText": "A false nine pulls centre-backs out of position and creates space for runners.",
+  "advancedText": "Detected from forward position group with deep average position and high passing involvement.",
+  "misconceptions": null,
+  "relatedKeys": [
+   "formation"
+  ],
+  "linkedMetricKeys": [
+   "player.role_profile"
+  ]
+ },
+ {
+  "key": "double-pivot",
+  "name": "Double pivot",
+  "category": "roles",
+  "simpleText": "Two holding midfielders side by side.",
+  "exploreText": "A double pivot gives security in build-up and protection in front of the defence.",
+  "advancedText": "Seen in formations such as 4-2-3-1 and 4-2-2-2.",
+  "misconceptions": null,
+  "relatedKeys": [
+   "formation"
+  ],
+  "linkedMetricKeys": [
+   "shape.starting_formation"
+  ]
+ },
+ {
+  "key": "third-man-run",
+  "name": "Third-man run",
+  "category": "in-possession",
+  "simpleText": "A run that receives a pass after a quick combination between two teammates.",
+  "exploreText": "Player A passes to B, who plays it first time to C making the run; the run is hard to track because the defender watches A and B.",
+  "advancedText": "Needs sequence detection plus positions; planned with pattern discovery.",
+  "misconceptions": null,
+  "relatedKeys": [
+   "overload",
+   "line-breaking-pass"
+  ],
+  "linkedMetricKeys": []
+ },
+ {
+  "key": "passing-network",
+  "name": "Passing network",
+  "category": "in-possession",
+  "simpleText": "A map of who passed to whom.",
+  "exploreText": "Lines between players show the most common passing links; node positions show where players usually received or passed.",
+  "advancedText": "Nodes = mean pass start/end locations; edges = completed passes between pairs.",
+  "misconceptions": null,
+  "relatedKeys": [
+   "formation",
+   "build-up"
+  ],
+  "linkedMetricKeys": [
+   "passing.network"
+  ]
+ },
+ {
+  "key": "set-piece",
+  "name": "Set piece",
+  "category": "set-pieces",
+  "simpleText": "Corners, free kicks and throw-ins.",
+  "exploreText": "Set pieces are rehearsed routines and can be a large share of a team's chances.",
+  "advancedText": "Touchline groups possessions by play pattern (From Corner, From Free Kick, From Throw In).",
+  "misconceptions": null,
+  "relatedKeys": [
+   "xg"
+  ],
+  "linkedMetricKeys": [
+   "shooting.set_piece_xg_share"
+  ]
+ },
+ {
+  "key": "compactness",
+  "name": "Compactness",
+  "category": "shape",
+  "simpleText": "How close together a team's players are.",
+  "exploreText": "Compact teams leave little space between lines; it needs player tracking to measure.",
+  "advancedText": "Planned with tracking (Milestone 4).",
+  "misconceptions": null,
+  "relatedKeys": [
+   "mid-block",
+   "low-block"
+  ],
+  "linkedMetricKeys": [
+   "shape.compactness_m2"
+  ]
+ },
+ {
+  "key": "player-role",
+  "name": "Player role",
+  "category": "roles",
+  "simpleText": "What a player actually did, beyond their listed position.",
+  "exploreText": "Two midfielders in the same position can play very different roles, such as ball-winner or playmaker.",
+  "advancedText": "Touchline compares a player's per-90 actions with 14 role archetypes and shows the closest two.",
+  "misconceptions": null,
+  "relatedKeys": [
+   "inverted-fullback",
+   "false-nine"
+  ],
+  "linkedMetricKeys": [
+   "player.role_profile"
+  ]
+ },
+ {
+  "key": "score-state",
+  "name": "Score state",
+  "category": "context",
+  "simpleText": "Whether a team was leading, drawing or trailing.",
+  "exploreText": "Teams often change approach depending on the score, so Touchline splits metrics by score state.",
+  "advancedText": "Each event is labelled from the goal timeline at the moment it happened.",
+  "misconceptions": null,
+  "relatedKeys": [],
+  "linkedMetricKeys": []
+ }
+]

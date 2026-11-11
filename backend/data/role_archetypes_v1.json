@@ -1,0 +1,28 @@
+{
+  "id": "role_archetypes_v1",
+  "notes": "Hand-authored centroids in z-score space over the per-90 feature vector. Unlisted features are 0. Candidates are restricted by position family so a centre-back is never labelled a winger.",
+  "features": ["passes", "prog_passes", "prog_carries", "xt", "final_third_touches", "box_touches", "shots", "npxg", "key_passes", "pressures", "tackles_interceptions", "recoveries", "aerials", "crosses", "mean_x", "mean_abs_y", "mean_pass_length"],
+  "families": {
+    "GK": ["goalkeeper"],
+    "CB": ["ball_playing_cb", "stopper_cb"],
+    "FB": ["overlapping_fb", "inverted_fb"],
+    "MID": ["holding_mid", "deep_lying_playmaker", "box_to_box", "ball_winner", "advanced_playmaker", "winger"],
+    "FWD": ["winger", "target_forward", "pressing_forward", "poacher", "advanced_playmaker"]
+  },
+  "archetypes": {
+    "goalkeeper": { "label": "Goalkeeper", "centroid": { "mean_x": -2.5, "mean_pass_length": 1.5 } },
+    "ball_playing_cb": { "label": "Ball-playing centre-back", "centroid": { "passes": 1.0, "prog_passes": 1.2, "mean_pass_length": 0.6, "mean_x": -0.6, "mean_abs_y": -0.6, "aerials": 0.3, "pressures": -0.4 } },
+    "stopper_cb": { "label": "Stopper centre-back", "centroid": { "tackles_interceptions": 1.0, "aerials": 1.2, "passes": -0.4, "prog_passes": -0.4, "mean_x": -1.0, "mean_abs_y": -0.6, "recoveries": 0.5 } },
+    "overlapping_fb": { "label": "Overlapping full-back", "centroid": { "crosses": 1.2, "final_third_touches": 0.8, "mean_abs_y": 1.2, "prog_carries": 0.8, "mean_x": 0.3, "key_passes": 0.3 } },
+    "inverted_fb": { "label": "Inverted full-back", "centroid": { "passes": 0.9, "prog_passes": 0.6, "mean_abs_y": -0.4, "crosses": -0.6, "tackles_interceptions": 0.3 } },
+    "holding_mid": { "label": "Holding midfielder", "centroid": { "tackles_interceptions": 0.9, "recoveries": 1.0, "passes": 0.5, "mean_x": -0.6, "mean_abs_y": -1.0, "shots": -0.7, "box_touches": -0.7 } },
+    "deep_lying_playmaker": { "label": "Deep-lying playmaker", "centroid": { "passes": 1.3, "prog_passes": 1.3, "mean_pass_length": 0.8, "mean_x": -0.4, "mean_abs_y": -0.8, "key_passes": 0.2 } },
+    "box_to_box": { "label": "Box-to-box midfielder", "centroid": { "pressures": 0.8, "prog_carries": 0.6, "box_touches": 0.4, "tackles_interceptions": 0.4, "shots": 0.3, "mean_x": 0.3, "recoveries": 0.4 } },
+    "ball_winner": { "label": "Ball-winner", "centroid": { "tackles_interceptions": 1.4, "pressures": 1.0, "recoveries": 0.8, "passes": -0.3, "key_passes": -0.4 } },
+    "advanced_playmaker": { "label": "Advanced playmaker", "centroid": { "key_passes": 1.3, "xt": 1.2, "final_third_touches": 1.0, "prog_passes": 0.6, "mean_x": 0.8, "mean_abs_y": -0.4, "shots": 0.4 } },
+    "winger": { "label": "Winger", "centroid": { "crosses": 1.0, "prog_carries": 1.2, "mean_abs_y": 1.3, "final_third_touches": 0.8, "mean_x": 0.8, "xt": 0.5 } },
+    "target_forward": { "label": "Target forward", "centroid": { "aerials": 1.5, "box_touches": 0.8, "passes": -0.3, "mean_x": 1.0, "mean_abs_y": -1.0, "shots": 0.5 } },
+    "pressing_forward": { "label": "Pressing forward", "centroid": { "pressures": 1.5, "tackles_interceptions": 0.5, "mean_x": 1.0, "shots": 0.3, "recoveries": 0.4 } },
+    "poacher": { "label": "Poacher", "centroid": { "box_touches": 1.5, "shots": 1.2, "npxg": 1.4, "passes": -1.0, "prog_passes": -0.8, "mean_x": 1.2, "mean_abs_y": -1.0 } }
+  }
+}

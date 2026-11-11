@@ -1,0 +1,20 @@
+[
+  {
+    "id": "statsbomb-open-data",
+    "provider": "statsbomb",
+    "name": "StatsBomb Open Data",
+    "url": "https://github.com/statsbomb/open-data",
+    "termsSummary": "Free for non-commercial research and development with attribution. Not licensed for commercial redistribution in a public product; production needs a commercial feed.",
+    "attributionText": "Data: StatsBomb Open Data (Hudl StatsBomb)",
+    "commercialUseAllowed": false
+  },
+  {
+    "id": "sportmonks-commercial",
+    "provider": "sportmonks",
+    "name": "Sportmonks Football API (commercial plan, not yet contracted)",
+    "url": "https://www.sportmonks.com/football-api/",
+    "termsSummary": "Placeholder. Terms depend on the purchased plan; confirm the PDF section 9 licence checklist before production use.",
+    "attributionText": "Data: Sportmonks",
+    "commercialUseAllowed": false
+  }
+]

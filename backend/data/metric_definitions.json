@@ -1,0 +1,1073 @@
+[
+ {
+  "key": "possession.share",
+  "version": 1,
+  "name": "Possession share",
+  "family": "possession",
+  "unit": "%",
+  "direction": "neutral",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "How much of the ball a team had, measured by passes.",
+  "descriptionExplore": "Share of all attempted passes in the match that this team made, split by half and score state.",
+  "descriptionAdvanced": "Pass-based possession: team passes attempted / (both teams' passes attempted) x 100. Not time-based.",
+  "formula": "100 * passes_attempted(team) / passes_attempted(both)",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "Pass-based, so values differ slightly from time-in-possession figures shown by broadcasters."
+  },
+  "conceptKeys": [
+   "possession"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "possession.chains_count",
+  "version": 1,
+  "name": "Possessions",
+  "family": "possession",
+  "unit": "count",
+  "direction": "neutral",
+  "coverageLabel": "observed",
+  "descriptionQuick": "How many separate spells on the ball the team had.",
+  "descriptionExplore": "Count of possession chains (consecutive events with the same StatsBomb possession number) won by the team.",
+  "descriptionAdvanced": "Chain = events sharing (period, possession); owner = possession_team.",
+  "formula": "count(chains where owner = team)",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "possession-chain"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "possession.avg_chain_passes",
+  "version": 1,
+  "name": "Passes per possession",
+  "family": "possession",
+  "unit": "passes",
+  "direction": "neutral",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "How patient the team was: passes in a typical possession.",
+  "descriptionExplore": "Mean number of passes per possession chain; higher values suggest patient build-up, low values a direct style.",
+  "descriptionAdvanced": "mean over team chains of count(pass events by team in chain).",
+  "formula": "sum(passes in team chains) / count(team chains)",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "build-up"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "possession.final_third_entries",
+  "version": 1,
+  "name": "Final-third entries",
+  "family": "possession",
+  "unit": "count",
+  "direction": "higher_better",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "How often the team got the ball into the attacking third.",
+  "descriptionExplore": "Possessions in which the team had an on-ball action or completed a pass/carry ending beyond 70 m.",
+  "descriptionAdvanced": "Count of team chains with any event location x >= 70 m or completed pass/carry end_x >= 70 m (canonical 105 m pitch).",
+  "formula": "count(chains reaching x >= 70)",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "final-third"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "possession.box_entries",
+  "version": 1,
+  "name": "Box entries",
+  "family": "possession",
+  "unit": "count",
+  "direction": "higher_better",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "How often the team got the ball into the penalty area.",
+  "descriptionExplore": "Possessions that reached the opponent's penalty area through a completed pass, carry or touch.",
+  "descriptionAdvanced": "Penalty area: x >= 88.5 m and 13.84 <= y <= 54.16 m. Count of team chains with any event or completed pass/carry end in that area.",
+  "formula": "count(chains reaching box)",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "box-entry"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "possession.xt_added",
+  "version": 1,
+  "name": "Expected threat added (xT)",
+  "family": "possession",
+  "unit": "xT",
+  "direction": "higher_better",
+  "coverageLabel": "inferred",
+  "descriptionQuick": "How much the team's passes and carries moved the ball into dangerous places.",
+  "descriptionExplore": "Sum of the change in expected threat for every completed pass and carry. Positive values mean the ball moved somewhere more likely to lead to a goal.",
+  "descriptionAdvanced": "Static 12x8 xT grid (Karun Singh, open v1). For each completed pass/carry: xT(end cell) - xT(start cell); summed per team/player. The grid was fitted on another dataset.",
+  "formula": "sum(xT(end) - xT(start)) over completed passes and carries",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "Grid not fitted on StatsBomb Open Data; treat as an estimate."
+  },
+  "conceptKeys": [
+   "xt"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "possession.xt_by_lane",
+  "version": 1,
+  "name": "xT by lane",
+  "family": "possession",
+  "unit": "share",
+  "direction": "neutral",
+  "coverageLabel": "inferred",
+  "descriptionQuick": "Which side of the pitch the team created threat from.",
+  "descriptionExplore": "Positive xT added, split across five vertical lanes (left wing, left half-space, centre, right half-space, right wing).",
+  "descriptionAdvanced": "Positive xT of completed passes/carries grouped by the lane of the action's end location; returned as share of total positive xT.",
+  "formula": "sum(max(0,dxT)) by end lane / sum(max(0,dxT))",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "xt",
+   "half-space"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "passing.passes_attempted",
+  "version": 1,
+  "name": "Passes attempted",
+  "family": "passing",
+  "unit": "count",
+  "direction": "neutral",
+  "coverageLabel": "observed",
+  "descriptionQuick": "How many passes the team tried.",
+  "descriptionExplore": "All pass events, including set-piece deliveries.",
+  "descriptionAdvanced": "count(type=pass)",
+  "formula": "count(pass)",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [],
+  "status": "active"
+ },
+ {
+  "key": "passing.pass_completion",
+  "version": 1,
+  "name": "Pass completion",
+  "family": "passing",
+  "unit": "%",
+  "direction": "higher_better",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "How many passes reached a teammate.",
+  "descriptionExplore": "Completed passes divided by attempted passes.",
+  "descriptionAdvanced": "StatsBomb completed = pass.outcome absent. Excludes passes with outcome Unknown from the denominator.",
+  "formula": "100 * completed / (attempted - unknown)",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [],
+  "status": "active"
+ },
+ {
+  "key": "passing.network",
+  "version": 1,
+  "name": "Passing network",
+  "family": "passing",
+  "unit": "graph",
+  "direction": "neutral",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "Who passed to whom, and where players usually received the ball.",
+  "descriptionExplore": "Average positions of players on the ball and the number of completed passes between each pair.",
+  "descriptionAdvanced": "Nodes: players with >= 1 pass or receipt; position = mean of pass start (as passer) and pass end (as recipient). Edges: completed passes passer -> recipient. Computed for the full match and up to the team's first substitution.",
+  "formula": "graph(nodes, edges)",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "passing-network"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "progression.progressive_passes",
+  "version": 1,
+  "name": "Progressive passes",
+  "family": "progression",
+  "unit": "count",
+  "direction": "higher_better",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "Passes that moved the ball significantly towards goal.",
+  "descriptionExplore": "Completed open-play passes that brought the ball much closer to the opponent goal.",
+  "descriptionAdvanced": "Touchline v1 (Wyscout-style thresholds): completed open-play pass whose distance to goal centre (105,34) decreases by >= 30 m when start and end are in own half, >= 15 m when crossing halves, >= 10 m when both in opponent half. Set pieces (corner, free kick, throw-in, goal kick, kick-off) excluded.",
+  "formula": "count(progressive passes)",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "Thresholds are Touchline v1; FBref/Opta use different rules, so values are not directly comparable."
+  },
+  "conceptKeys": [
+   "progressive-pass"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "progression.progressive_carries",
+  "version": 1,
+  "name": "Progressive carries",
+  "family": "progression",
+  "unit": "count",
+  "direction": "higher_better",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "Runs with the ball that moved it significantly towards goal.",
+  "descriptionExplore": "Carries that met the same distance rule as progressive passes.",
+  "descriptionAdvanced": "Same thresholds as progressive passes applied to carry start/end.",
+  "formula": "count(progressive carries)",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "progressive-pass"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "progression.progressive_distance_m",
+  "version": 1,
+  "name": "Progressive distance",
+  "family": "progression",
+  "unit": "m",
+  "direction": "higher_better",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "Total distance the team moved the ball towards goal with passes and carries.",
+  "descriptionExplore": "Sum of forward distance gained by completed passes and carries (only gains counted).",
+  "descriptionAdvanced": "sum(max(0, d_goal(start) - d_goal(end))) for completed passes and carries.",
+  "formula": "sum of goal-distance reductions",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [],
+  "status": "active"
+ },
+ {
+  "key": "progression.by_lane",
+  "version": 1,
+  "name": "Progression lanes",
+  "family": "progression",
+  "unit": "share",
+  "direction": "neutral",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "Which channels the team used to move forward.",
+  "descriptionExplore": "Share of progressive passes and carries ending in each of the five vertical lanes.",
+  "descriptionAdvanced": "Lane boundaries every 13.6 m across the 68 m width.",
+  "formula": "count by lane / total",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "half-space",
+   "wide-channel"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "progression.zone14_receptions",
+  "version": 1,
+  "name": "Zone 14 receptions",
+  "family": "progression",
+  "unit": "count",
+  "direction": "higher_better",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "How often the team found a player in the dangerous area just outside the box.",
+  "descriptionExplore": "Completed passes received in zone 14, the central area in front of the penalty box.",
+  "descriptionAdvanced": "Zone 14 (Touchline v1) = x in [70, 87.5) m, y in [22.67, 45.33) m. Count of completed passes ending there.",
+  "formula": "count(completed pass end in zone 14)",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "zone-14"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "buildup.success_rate",
+  "version": 1,
+  "name": "Build-up success",
+  "family": "buildup",
+  "unit": "%",
+  "direction": "higher_better",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "How often the team played out from the back into the attacking third.",
+  "descriptionExplore": "Share of possessions starting in the team's own third (open play, goal kick or keeper) that reached the final third.",
+  "descriptionAdvanced": "Denominator: team chains starting at x < 35 m with play pattern Regular Play, From Goal Kick or From Keeper. Numerator: those that reached x >= 70 m.",
+  "formula": "reached_final_third / own_third_starts",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "build-up"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "pressing.ppda",
+  "version": 1,
+  "name": "PPDA",
+  "family": "pressing",
+  "unit": "passes per action",
+  "direction": "lower_better",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "How many passes the opponent was allowed before the team tried to win the ball. Lower usually means more aggressive pressing.",
+  "descriptionExplore": "Opponent passes in their own 60% of the pitch divided by the team's tackles, interceptions and fouls in that same area.",
+  "descriptionAdvanced": "Touchline v1: opponent open-play passes attempted with start x <= 63 m (their own 60%) / team defensive actions at x >= 42 m (mirror zone), where defensive actions = Duel(type Tackle, any outcome) + Interception + Foul Committed. Pressure events excluded; see pressing.ppda_incl_pressures.",
+  "formula": "opp_passes(own 60%) / def_actions(opp 60%)",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "Action set differs from some public sources (e.g. inclusion of challenges/pressures), so values will not match FBref or Opta exactly."
+  },
+  "conceptKeys": [
+   "ppda",
+   "high-press"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "pressing.ppda_incl_pressures",
+  "version": 1,
+  "name": "PPDA incl. pressures",
+  "family": "pressing",
+  "unit": "passes per action",
+  "direction": "lower_better",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "A pressing measure that also counts closing-down actions.",
+  "descriptionExplore": "Like PPDA but every StatsBomb Pressure event in the zone also counts as a defensive action.",
+  "descriptionAdvanced": "As pressing.ppda with Pressure added to the denominator.",
+  "formula": "opp_passes / (def_actions + pressures)",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb-specific: other providers do not record pressures."
+  },
+  "conceptKeys": [
+   "ppda"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "pressing.pressures",
+  "version": 1,
+  "name": "Pressures",
+  "family": "pressing",
+  "unit": "count",
+  "direction": "neutral",
+  "coverageLabel": "observed",
+  "descriptionQuick": "How often players closed down an opponent on the ball.",
+  "descriptionExplore": "Count of StatsBomb pressure events.",
+  "descriptionAdvanced": "count(type=pressure)",
+  "formula": "count(pressure)",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb-specific event; not available from most event providers."
+  },
+  "conceptKeys": [
+   "high-press"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "pressing.pressure_regains_5s",
+  "version": 1,
+  "name": "Pressure regains (5s)",
+  "family": "pressing",
+  "unit": "count",
+  "direction": "higher_better",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "Pressures that won the ball back within five seconds.",
+  "descriptionExplore": "Pressure events followed by the pressing team gaining possession within 5 seconds.",
+  "descriptionAdvanced": "Pressure at t; a new chain owned by the pressing team starts within (t, t+5s] in the same period.",
+  "formula": "count",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "counterpress"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "pressing.high_turnovers",
+  "version": 1,
+  "name": "High turnovers",
+  "family": "pressing",
+  "unit": "count",
+  "direction": "higher_better",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "How often the team won the ball close to the opponent's goal.",
+  "descriptionExplore": "Open-play possessions that the team started within 40 m of the opponent goal.",
+  "descriptionAdvanced": "Team chain whose play pattern is Regular Play or From Counter and whose first located event is <= 40 m from goal centre (105,34).",
+  "formula": "count",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "high-press",
+   "transition"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "pressing.shots_after_high_turnover",
+  "version": 1,
+  "name": "Shots after high turnovers",
+  "family": "pressing",
+  "unit": "count",
+  "direction": "higher_better",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "How often winning the ball high led to a shot.",
+  "descriptionExplore": "High-turnover possessions that ended with a shot.",
+  "descriptionAdvanced": "High turnover chains containing a shot by the team.",
+  "formula": "count",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "high-press"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "pressing.defensive_action_height_m",
+  "version": 1,
+  "name": "Defensive action height",
+  "family": "pressing",
+  "unit": "m",
+  "direction": "neutral",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "How far up the pitch the team usually tried to win the ball.",
+  "descriptionExplore": "Average distance from the team's own goal line of its tackles, interceptions, fouls, ball recoveries and pressures.",
+  "descriptionAdvanced": "Mean x (metres from own goal line) of Duel(Tackle), Interception, Foul Committed, Ball Recovery and Pressure events. An event-based proxy for block height, not a tracking measure.",
+  "formula": "mean(x of defensive actions)",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "Event-based proxy. True defensive line height needs tracking data."
+  },
+  "conceptKeys": [
+   "high-press",
+   "mid-block",
+   "low-block"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "transition.counterpress_regains",
+  "version": 1,
+  "name": "Counterpress regains",
+  "family": "transition",
+  "unit": "count",
+  "direction": "higher_better",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "Times the team won the ball back quickly after losing it.",
+  "descriptionExplore": "Possessions regained within 5 seconds of losing the ball.",
+  "descriptionAdvanced": "For each team turnover (team chain followed by opponent chain), the team starts a new chain within 5 s of the opponent chain start (same period). Also reported for 3 s and 8 s windows in value_json.",
+  "formula": "count",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "counterpress",
+   "transition"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "transition.counterpress_regain_rate",
+  "version": 1,
+  "name": "Counterpress regain rate",
+  "family": "transition",
+  "unit": "%",
+  "direction": "higher_better",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "How often losing the ball was immediately followed by winning it back.",
+  "descriptionExplore": "Share of possessions lost in open play that the team won back within 5 seconds.",
+  "descriptionAdvanced": "counterpress_regains(5s) / open-play turnovers. value_json holds 3/5/8 s windows.",
+  "formula": "regains / turnovers",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "counterpress"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "transition.counter_shots",
+  "version": 1,
+  "name": "Counter-attack shots",
+  "family": "transition",
+  "unit": "count",
+  "direction": "higher_better",
+  "coverageLabel": "observed",
+  "descriptionQuick": "Shots that came from counter-attacks.",
+  "descriptionExplore": "Shots in possessions StatsBomb labels as From Counter.",
+  "descriptionAdvanced": "Shots in chains with play_pattern = From Counter.",
+  "formula": "count",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "transition"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "transition.regain_to_shot_seconds",
+  "version": 1,
+  "name": "Regain to shot time",
+  "family": "transition",
+  "unit": "s",
+  "direction": "lower_better",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "How quickly the team turned a regain into a shot.",
+  "descriptionExplore": "Median time from the start of a shot-ending open-play possession to its first shot.",
+  "descriptionAdvanced": "Median over team chains (Regular Play / From Counter) containing a shot of (first shot clock - chain start clock).",
+  "formula": "median",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "transition"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "shooting.shots",
+  "version": 1,
+  "name": "Shots",
+  "family": "shooting",
+  "unit": "count",
+  "direction": "higher_better",
+  "coverageLabel": "observed",
+  "descriptionQuick": "Total shots.",
+  "descriptionExplore": "All shots excluding penalty shoot-outs.",
+  "descriptionAdvanced": "count(type=shot, period != 5)",
+  "formula": "count",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [],
+  "status": "active"
+ },
+ {
+  "key": "shooting.shots_on_target",
+  "version": 1,
+  "name": "Shots on target",
+  "family": "shooting",
+  "unit": "count",
+  "direction": "higher_better",
+  "coverageLabel": "observed",
+  "descriptionQuick": "Shots that would have gone in without the keeper.",
+  "descriptionExplore": "Shots with outcome Goal, Saved or Saved To Post.",
+  "descriptionAdvanced": "outcome in (Goal, Saved, Saved To Post)",
+  "formula": "count",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [],
+  "status": "active"
+ },
+ {
+  "key": "shooting.goals",
+  "version": 1,
+  "name": "Goals",
+  "family": "shooting",
+  "unit": "count",
+  "direction": "higher_better",
+  "coverageLabel": "observed",
+  "descriptionQuick": "Goals scored (excluding shoot-outs).",
+  "descriptionExplore": "Shot goals plus own goals in the team's favour.",
+  "descriptionAdvanced": "count(shot outcome Goal) + count(Own Goal For), period != 5",
+  "formula": "count",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [],
+  "status": "active"
+ },
+ {
+  "key": "shooting.xg",
+  "version": 1,
+  "name": "Expected goals (xG)",
+  "family": "shooting",
+  "unit": "xG",
+  "direction": "higher_better",
+  "coverageLabel": "inferred",
+  "descriptionQuick": "The quality of chances: how many goals an average team would score from these shots.",
+  "descriptionExplore": "Sum of the provider's expected-goals values for every shot.",
+  "descriptionAdvanced": "Sum of shot.statsbomb_xg (StatsBomb model) excluding the shoot-out.",
+  "formula": "sum(statsbomb_xg)",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "Uses StatsBomb's own xG model; other providers' xG differs."
+  },
+  "conceptKeys": [
+   "xg"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "shooting.npxg",
+  "version": 1,
+  "name": "Non-penalty xG",
+  "family": "shooting",
+  "unit": "xG",
+  "direction": "higher_better",
+  "coverageLabel": "inferred",
+  "descriptionQuick": "Chance quality without penalties.",
+  "descriptionExplore": "xG excluding penalty kicks.",
+  "descriptionAdvanced": "sum(statsbomb_xg) where shot.type != Penalty, period != 5",
+  "formula": "sum",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "xg"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "shooting.xg_per_shot",
+  "version": 1,
+  "name": "xG per shot",
+  "family": "shooting",
+  "unit": "xG",
+  "direction": "higher_better",
+  "coverageLabel": "inferred",
+  "descriptionQuick": "How good the average chance was.",
+  "descriptionExplore": "Mean xG of non-penalty shots.",
+  "descriptionAdvanced": "npxg / non-penalty shots",
+  "formula": "npxg / shots",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "xg"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "shooting.goals_minus_xg",
+  "version": 1,
+  "name": "Goals minus xG",
+  "family": "shooting",
+  "unit": "goals",
+  "direction": "neutral",
+  "coverageLabel": "inferred",
+  "descriptionQuick": "Whether the team scored more or fewer than its chances suggested.",
+  "descriptionExplore": "Goals (excluding own goals) minus xG. Single-match values are noisy.",
+  "descriptionAdvanced": "shot goals - xG, period != 5",
+  "formula": "goals - xg",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "xg"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "shooting.set_piece_xg_share",
+  "version": 1,
+  "name": "Set-piece xG share",
+  "family": "shooting",
+  "unit": "%",
+  "direction": "neutral",
+  "coverageLabel": "inferred",
+  "descriptionQuick": "How much of the team's threat came from set pieces.",
+  "descriptionExplore": "Share of non-penalty xG from possessions starting from corners, free kicks or throw-ins.",
+  "descriptionAdvanced": "npxG in chains with play_pattern in (From Corner, From Free Kick, From Throw In) / npxG",
+  "formula": "share",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "set-piece"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "shooting.shot_map",
+  "version": 1,
+  "name": "Shot map",
+  "family": "shooting",
+  "unit": "shots",
+  "direction": "neutral",
+  "coverageLabel": "observed",
+  "descriptionQuick": "Where shots were taken and how good each chance was.",
+  "descriptionExplore": "Every shot with location, xG, outcome, body part and player.",
+  "descriptionAdvanced": "List of shots with canonical coordinates and provider xG.",
+  "formula": "list",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [],
+  "status": "active"
+ },
+ {
+  "key": "shooting.shootout",
+  "version": 1,
+  "name": "Penalty shoot-out",
+  "family": "shooting",
+  "unit": "kicks",
+  "direction": "neutral",
+  "coverageLabel": "observed",
+  "descriptionQuick": "The penalty shoot-out, kick by kick.",
+  "descriptionExplore": "Shoot-out kicks in order with outcome.",
+  "descriptionAdvanced": "Shots in period 5.",
+  "formula": "list",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [],
+  "status": "active"
+ },
+ {
+  "key": "shape.starting_formation",
+  "version": 1,
+  "name": "Starting formation",
+  "family": "shape",
+  "unit": "formation",
+  "direction": "neutral",
+  "coverageLabel": "observed",
+  "descriptionQuick": "The formation the team started in.",
+  "descriptionExplore": "Formation recorded in the Starting XI event.",
+  "descriptionAdvanced": "starting_xi.tactics.formation, e.g. 433 -> 4-3-3",
+  "formula": "formation",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "formation"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "shape.formation_timeline",
+  "version": 1,
+  "name": "Formation changes",
+  "family": "shape",
+  "unit": "timeline",
+  "direction": "neutral",
+  "coverageLabel": "observed",
+  "descriptionQuick": "When and how the team changed shape.",
+  "descriptionExplore": "Starting formation, tactical shifts and substitutions in order.",
+  "descriptionAdvanced": "Starting XI + Tactical Shift + Substitution events.",
+  "formula": "timeline",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [
+   "formation"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "shape.avg_positions",
+  "version": 1,
+  "name": "Average positions",
+  "family": "shape",
+  "unit": "positions",
+  "direction": "neutral",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "Where each player usually was when involved in passing.",
+  "descriptionExplore": "Mean location of each player's passes and receptions.",
+  "descriptionAdvanced": "As passing.network nodes, per scope.",
+  "formula": "positions",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "Event-based; reflects on-ball positions only, not full positioning (needs tracking)."
+  },
+  "conceptKeys": [
+   "formation"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "player.minutes",
+  "version": 1,
+  "name": "Minutes played",
+  "family": "player",
+  "unit": "min",
+  "direction": "neutral",
+  "coverageLabel": "observed",
+  "descriptionQuick": "Minutes on the pitch.",
+  "descriptionExplore": "From lineup positions and substitutions.",
+  "descriptionAdvanced": "Sum of on-pitch intervals from lineup position spells.",
+  "formula": "minutes",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "StatsBomb Open Data events; coordinates converted from 120x80 to metres on 105x68."
+  },
+  "conceptKeys": [],
+  "status": "active"
+ },
+ {
+  "key": "player.role_profile",
+  "version": 1,
+  "name": "Role profile",
+  "family": "player",
+  "unit": "role",
+  "direction": "neutral",
+  "coverageLabel": "inferred",
+  "descriptionQuick": "The role a player most resembled in this match.",
+  "descriptionExplore": "Nearest of 14 tactical role archetypes from the player's per-90 actions, restricted to their position group.",
+  "descriptionAdvanced": "Per-90 feature vector z-scored against a reference table, cosine similarity to hand-authored archetype centroids within the lineup position group; reports best and second-best role with similarity.",
+  "formula": "argmax cosine(z, centroid)",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "Reference statistics are provisional until computed from a larger ingested corpus."
+  },
+  "conceptKeys": [
+   "player-role"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "shape.team_width_m",
+  "version": 1,
+  "name": "Team width",
+  "family": "shape",
+  "unit": "m",
+  "direction": "neutral",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "How wide the team stretched the pitch.",
+  "descriptionExplore": "Distance between the widest outfield players, through the match.",
+  "descriptionAdvanced": "Needs continuous tracking (Milestone 4).",
+  "formula": "p90(y) - p10(y) per frame",
+  "requires": {
+   "tracking": true
+  },
+  "providerCaveats": {
+   "statsbomb": "Not available from event data."
+  },
+  "conceptKeys": [
+   "formation"
+  ],
+  "status": "planned"
+ },
+ {
+  "key": "shape.compactness_m2",
+  "version": 1,
+  "name": "Compactness",
+  "family": "shape",
+  "unit": "m2",
+  "direction": "neutral",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "How tightly grouped the team was.",
+  "descriptionExplore": "Area of the convex hull of outfield players.",
+  "descriptionAdvanced": "Needs continuous tracking (Milestone 4).",
+  "formula": "hull area per frame",
+  "requires": {
+   "tracking": true
+  },
+  "providerCaveats": {
+   "statsbomb": "Not available from event data."
+  },
+  "conceptKeys": [
+   "compactness"
+  ],
+  "status": "planned"
+ },
+ {
+  "key": "shape.defensive_line_height_m",
+  "version": 1,
+  "name": "Defensive line height",
+  "family": "shape",
+  "unit": "m",
+  "direction": "neutral",
+  "coverageLabel": "calculated",
+  "descriptionQuick": "How high the back line stood.",
+  "descriptionExplore": "Mean x of the deepest outfield line out of possession.",
+  "descriptionAdvanced": "Needs continuous tracking (Milestone 4).",
+  "formula": "mean(x of back line)",
+  "requires": {
+   "tracking": true
+  },
+  "providerCaveats": {
+   "statsbomb": "Not available from event data; see pressing.defensive_action_height_m for an event-based proxy."
+  },
+  "conceptKeys": [
+   "high-press"
+  ],
+  "status": "planned"
+ },
+ {
+  "key": "passing.key_passes",
+  "version": 1,
+  "name": "Key passes",
+  "family": "passing",
+  "unit": "count",
+  "direction": "higher_better",
+  "coverageLabel": "observed",
+  "descriptionQuick": "Passes that set up a shot.",
+  "descriptionExplore": "Passes flagged by the provider as the last pass before a shot (shot assists and goal assists).",
+  "descriptionAdvanced": "count(pass where shot_assist or goal_assist), excluding the shoot-out. valueJson.assists = goal assists.",
+  "formula": "count(shot-assisting passes)",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "Provider-flagged shot assists."
+  },
+  "conceptKeys": [
+   "xa"
+  ],
+  "status": "active"
+ },
+ {
+  "key": "passing.xa",
+  "version": 1,
+  "name": "Expected assists (xA)",
+  "family": "passing",
+  "unit": "xG",
+  "direction": "higher_better",
+  "coverageLabel": "inferred",
+  "descriptionQuick": "The quality of chances a player created for others.",
+  "descriptionExplore": "Sum of the xG of shots that came directly from the player's passes.",
+  "descriptionAdvanced": "sum(statsbomb_xg of the shot referenced by pass.assisted_shot_id) over key passes.",
+  "formula": "sum(xG of assisted shots)",
+  "requires": {
+   "events": true
+  },
+  "providerCaveats": {
+   "statsbomb": "Uses StatsBomb xG for the assisted shot."
+  },
+  "conceptKeys": [
+   "xa",
+   "xg"
+  ],
+  "status": "active"
+ }
+]

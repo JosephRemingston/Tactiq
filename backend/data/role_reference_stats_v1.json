@@ -1,0 +1,76 @@
+{
+ "id": "role_reference_stats_v1",
+ "provisional": false,
+ "source": "StatsBomb Open Data 43:106 (64 matches, outfield players >= 30 min)",
+ "players": 1569,
+ "features": {
+  "passes": {
+   "mean": 42.7847,
+   "std": 23.7332
+  },
+  "prog_passes": {
+   "mean": 2.6104,
+   "std": 2.4538
+  },
+  "prog_carries": {
+   "mean": 1.5037,
+   "std": 1.9825
+  },
+  "xt": {
+   "mean": 0.1202,
+   "std": 0.1621
+  },
+  "final_third_touches": {
+   "mean": 32.5304,
+   "std": 27.5894
+  },
+  "box_touches": {
+   "mean": 4.1291,
+   "std": 5.4592
+  },
+  "shots": {
+   "mean": 1.0381,
+   "std": 1.4893
+  },
+  "npxg": {
+   "mean": 0.1004,
+   "std": 0.232
+  },
+  "key_passes": {
+   "mean": 0.7234,
+   "std": 1.094
+  },
+  "pressures": {
+   "mean": 11.7022,
+   "std": 6.9693
+  },
+  "tackles_interceptions": {
+   "mean": 2.3788,
+   "std": 2.0375
+  },
+  "recoveries": {
+   "mean": 3.3064,
+   "std": 2.3282
+  },
+  "aerials": {
+   "mean": 2.8284,
+   "std": 2.6194
+  },
+  "crosses": {
+   "mean": 1.0233,
+   "std": 1.5562
+  },
+  "mean_x": {
+   "mean": 55.5091,
+   "std": 12.9898
+  },
+  "mean_abs_y": {
+   "mean": 19.0883,
+   "std": 5.2193
+  },
+  "mean_pass_length": {
+   "mean": 16.5895,
+   "std": 3.6431
+  }
+ }
+}
