@@ -8,6 +8,7 @@ import { WorkerModule } from './worker.module';
 
 /** Worker process: BullMQ processors for WORKER_QUEUES plus a tiny /healthz for the orchestrator. */
 async function main(): Promise<void> {
+  process.env.TOUCHLINE_ROLE = 'worker';
   const config = loadConfig();
   const app = await NestFactory.createApplicationContext(WorkerModule.register(config), { bufferLogs: true });
   app.useLogger(app.get(Logger));

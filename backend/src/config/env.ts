@@ -75,6 +75,17 @@ export const envSchema = z.object({
   /** Retry delay = min(base * 2^(attempt-1), 30 min) + jitter. */
   QUEUE_BACKOFF_BASE_MS: z.coerce.number().int().nonnegative().default(60_000),
 
+  /** Comma-separated browser origins allowed to call the API cross-origin (not needed when served same-origin). */
+  CORS_ORIGINS: z.string().default(''),
+  /**
+   * Serverless hosting (Netlify): URL of the background worker function, woken after jobs are enqueued.
+   * Defaults to <URL>/.netlify/functions/worker-background when running on Netlify.
+   */
+  WORKER_TRIGGER_URL: optStr(),
+  /** Shared secret the worker trigger must present (x-worker-secret header). */
+  WORKER_TRIGGER_SECRET: optStr(),
+  /** Time budget for one serverless worker run (Netlify background functions stop at 15 minutes). */
+  WORKER_DRAIN_BUDGET_MS: z.coerce.number().int().positive().default(13 * 60_000),
   THROTTLE_IP_PER_MIN: z.coerce.number().int().positive().default(120),
   THROTTLE_USER_PER_MIN: z.coerce.number().int().positive().default(600),
   CACHE_TTL_MATCH_SECONDS: z.coerce.number().int().positive().default(60),
@@ -87,14 +98,19 @@ let loaded = false;
 /** Loads `.env` (if present) once, then validates process.env. Throws with a readable message on invalid config. */
 export function loadConfig(overrides: Record<string, string | undefined> = {}): AppConfig {
   if (!loaded) {
-    // Real environment variables win, then .env.local (e.g. written by `neon env pull`), then .env.
-    for (const name of ['.env.local', '.env']) {
-      const file = resolve(process.cwd(), name);
-      if (existsSync(file)) process.loadEnvFile(file);
-    }
+    // Real environment variables win, then .env.local, then .env, then the repository-root .env.local
+    // (where `neon env pull` writes when run at the project root).
+    for (const file of envFiles()) process.loadEnvFile(file);
     loaded = true;
   }
   const parsed = envSchema.superRefine((c, ctx) => {
+    // Swapped Clerk keys are an easy paste mistake, and a secret key must never reach a frontend build.
+    if (c.CLERK_SECRET_KEY && !c.CLERK_SECRET_KEY.startsWith('sk_')) {
+      ctx.addIssue({ code: 'custom', path: ['CLERK_SECRET_KEY'], message: 'CLERK_SECRET_KEY must start with sk_test_ or sk_live_ (is it swapped with the publishable key?)' });
+    }
+    if (c.CLERK_PUBLISHABLE_KEY && !c.CLERK_PUBLISHABLE_KEY.startsWith('pk_')) {
+      ctx.addIssue({ code: 'custom', path: ['CLERK_PUBLISHABLE_KEY'], message: 'CLERK_PUBLISHABLE_KEY must start with pk_test_ or pk_live_ (is it swapped with the secret key?)' });
+    }
     // Never fall back to the AWS default credential chain (~/.aws): it can silently act on a real account.
     if (c.STORAGE_DRIVER === 's3' && (!c.S3_ACCESS_KEY_ID || !c.S3_SECRET_ACCESS_KEY)) {
       ctx.addIssue({ code: 'custom', path: ['S3_ACCESS_KEY_ID'], message: 'STORAGE_DRIVER=s3 needs S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY (or STORAGE_DRIVER=fs for local development)' });
@@ -103,7 +119,8 @@ export function loadConfig(overrides: Record<string, string | undefined> = {}): 
       if (!(c.S3_ENDPOINT ?? c.AWS_ENDPOINT_URL_S3)) {
         ctx.addIssue({ code: 'custom', path: ['AWS_ENDPOINT_URL_S3'], message: 'STORAGE_DRIVER=neon needs the branch storage endpoint: run `neon env pull` (writes AWS_ENDPOINT_URL_S3) or set S3_ENDPOINT' });
       }
-      if (!(c.S3_ACCESS_KEY_ID ?? c.AWS_ACCESS_KEY_ID) || !(c.S3_SECRET_ACCESS_KEY ?? c.AWS_SECRET_ACCESS_KEY)) {
+      const lambda = Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME); // AWS_* keys belong to Lambda itself there
+      if (!(c.S3_ACCESS_KEY_ID ?? (lambda ? undefined : c.AWS_ACCESS_KEY_ID)) || !(c.S3_SECRET_ACCESS_KEY ?? (lambda ? undefined : c.AWS_SECRET_ACCESS_KEY))) {
         ctx.addIssue({ code: 'custom', path: ['AWS_ACCESS_KEY_ID'], message: 'STORAGE_DRIVER=neon needs a Neon storage credential: run `neon env pull` (writes AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY) or set S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY' });
       }
     }
@@ -113,4 +130,16 @@ export function loadConfig(overrides: Record<string, string | undefined> = {}): 
     throw new Error(`Invalid environment configuration:\n${issues}`);
   }
   return parsed.data;
+}
+
+/** Env files in precedence order (earlier files win; real environment variables always win). */
+export function envFiles(cwd = process.cwd()): string[] {
+  const candidates = [resolve(cwd, '.env.local'), resolve(cwd, '.env'), resolve(cwd, '..', '.env.local')];
+  return [...new Set(candidates)].filter((f) => existsSync(f));
+}
+
+/** DATABASE_URL from the environment or the env files, without validating the rest (migrations, seeding). */
+export function databaseUrlFromEnv(): string {
+  for (const file of envFiles()) process.loadEnvFile(file);
+  return envSchema.shape.DATABASE_URL.parse(process.env.DATABASE_URL);
 }

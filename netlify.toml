@@ -1,0 +1,67 @@
+# One Netlify site for both parts of Touchline:
+#   frontend/   static Clerk auth tester (Vite build)  -> served from the CDN
+#   backend/    NestJS API                             -> netlify/functions/api.js (/v1/*, /healthz, /readyz)
+#               BullMQ workers                         -> netlify/functions/worker-background.js (+ worker-tick schedule)
+# Required site environment variables are listed in docs/deploy-netlify.md.
+
+[build]
+  base = "."
+  publish = "frontend/dist"
+  functions = "netlify/functions"
+  command = "sh scripts/netlify-build.sh"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NODE_ENV = "production"
+  # Values here apply to the build only. Functions read runtime variables set in the Netlify UI or CLI.
+
+[functions]
+  node_bundler = "nft"
+  # Files read at runtime by path (metric definitions, xT grid, role data, compiled migrations).
+  included_files = ["backend/data/**", "backend/dist/**"]
+
+[functions."worker-tick"]
+  schedule = "*/10 * * * *"
+
+# API routes go to the function on the same origin, so the browser needs no CORS.
+[[redirects]]
+  from = "/v1/*"
+  to = "/.netlify/functions/api/v1/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/healthz"
+  to = "/.netlify/functions/api/healthz"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/readyz"
+  to = "/.netlify/functions/api/readyz"
+  status = 200
+  force = true
+
+# Single-page app fallback.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# `netlify dev` / `netlify serve`: serve the built frontend and run the functions locally.
+[dev]
+  framework = "#static"
+  publish = "frontend/dist"
+  port = 8888
+  autoLaunch = false

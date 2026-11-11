@@ -25,6 +25,8 @@ export function configureApp(app: NestExpressApplication, config: AppConfig): vo
   app.useBodyParser('json', { limit: '256kb' });
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
   app.enableShutdownHooks();
+  const origins = config.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean);
+  if (origins.length) app.enableCors({ origin: origins, credentials: false, allowedHeaders: ['authorization', 'content-type', 'x-request-id'], exposedHeaders: ['x-request-id', 'x-entitlement-remaining', 'retry-after'] });
   if (config.ENABLE_SWAGGER && config.NODE_ENV !== 'production') {
     SwaggerModule.setup('docs', app, () => buildOpenApi(app), { jsonDocumentUrl: 'docs/openapi.json' });
   }

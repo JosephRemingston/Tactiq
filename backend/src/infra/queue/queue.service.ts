@@ -171,6 +171,24 @@ export class QueueService implements OnApplicationShutdown {
     return { jobId, created: true, status: 'queued', traceId: row.traceId };
   }
 
+  private lastTrigger = 0;
+
+  /**
+   * Serverless hosting has no always-on worker: after enqueueing, wake the background worker function
+   * (debounced, awaited briefly so a frozen function instance cannot drop the request). No-op inside workers.
+   */
+  private async triggerWorker(): Promise<void> {
+    const netlifyDefault = process.env.NETLIFY && process.env.URL ? `${process.env.URL}/.netlify/functions/worker-background` : undefined;
+    const url = this.config.WORKER_TRIGGER_URL ?? netlifyDefault;
+    if (!url || process.env.TOUCHLINE_ROLE === 'worker' || Date.now() - this.lastTrigger < 10_000) return;
+    this.lastTrigger = Date.now();
+    await fetch(url, {
+      method: 'POST',
+      headers: this.config.WORKER_TRIGGER_SECRET ? { 'x-worker-secret': this.config.WORKER_TRIGGER_SECRET } : {},
+      signal: AbortSignal.timeout(2000),
+    }).catch((err: Error) => this.logger.warn(`worker trigger failed: ${err.message}`));
+  }
+
   private async addToQueue(queue: QueueName, envelope: JobEnvelope, priority?: number, delayMs?: number): Promise<void> {
     await this.queue(queue).add(envelope.job_type, envelope, {
       jobId: envelope.job_id,
@@ -182,6 +200,7 @@ export class QueueService implements OnApplicationShutdown {
       removeOnFail: { age: 30 * 24 * 3600 },
     });
     this.logger.debug(`enqueued ${queue}/${envelope.job_type} ${envelope.job_id}`);
+    await this.triggerWorker();
   }
 
   async onApplicationShutdown(): Promise<void> {

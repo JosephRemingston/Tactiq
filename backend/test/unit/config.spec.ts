@@ -43,3 +43,22 @@ describe('deterministic job ids', () => {
     expect(one).not.toContain(':');
   });
 });
+
+describe('Netlify / Lambda safety', () => {
+  it('never uses Lambda execution credentials (AWS_* vars) as the Neon storage credential', () => {
+    process.env.AWS_LAMBDA_FUNCTION_NAME = 'api';
+    try {
+      expect(() => loadConfig({ ...base, STORAGE_DRIVER: 'neon', AWS_ENDPOINT_URL_S3: 'https://x.neon.tech', AWS_ACCESS_KEY_ID: 'ASIA-lambda', AWS_SECRET_ACCESS_KEY: 'lambda' })).toThrow(/AWS_ACCESS_KEY_ID|credential/);
+      const c = loadConfig({ ...base, STORAGE_DRIVER: 'neon', S3_ENDPOINT: 'https://x.neon.tech', S3_ACCESS_KEY_ID: 'neon', S3_SECRET_ACCESS_KEY: 'secret', AWS_ACCESS_KEY_ID: 'ASIA-lambda', AWS_REGION: 'us-east-1', S3_REGION_OVERRIDE: 'ap-southeast-1' });
+      expect(resolveS3Settings(c)).toMatchObject({ accessKeyId: 'neon', region: 'ap-southeast-1' });
+    } finally {
+      delete process.env.AWS_LAMBDA_FUNCTION_NAME;
+    }
+  });
+});
+
+describe('Clerk key sanity', () => {
+  it('rejects swapped Clerk keys', () => {
+    expect(() => loadConfig({ ...base, STORAGE_DRIVER: 'fs', CLERK_SECRET_KEY: 'pk_live_x', CLERK_PUBLISHABLE_KEY: 'sk_live_x' })).toThrow(/swapped/);
+  });
+});

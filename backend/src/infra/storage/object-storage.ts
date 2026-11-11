@@ -28,14 +28,28 @@ export interface S3Settings {
  * AWS_SECRET_ACCESS_KEY, AWS_REGION) unless S3_* overrides are set, and always uses path-style addressing.
  * STORAGE_DRIVER=s3 uses the S3_* variables only.
  */
+/**
+ * Inside AWS Lambda (Netlify Functions) AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_REGION hold the
+ * function's own execution credentials, so they must never be mistaken for the Neon storage credential.
+ */
+export const runningOnLambda = () => Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
+
 export function resolveS3Settings(config: AppConfig): S3Settings {
   const neon = config.STORAGE_DRIVER === 'neon';
+  const awsFallback = neon && !runningOnLambda();
   const endpoint = config.S3_ENDPOINT ?? (neon ? config.AWS_ENDPOINT_URL_S3 : undefined);
-  const accessKeyId = config.S3_ACCESS_KEY_ID ?? (neon ? config.AWS_ACCESS_KEY_ID : undefined);
-  const secretAccessKey = config.S3_SECRET_ACCESS_KEY ?? (neon ? config.AWS_SECRET_ACCESS_KEY : undefined);
-  if (!accessKeyId || !secretAccessKey) throw new Error(`object storage credentials missing for STORAGE_DRIVER=${config.STORAGE_DRIVER}`);
+  const accessKeyId = config.S3_ACCESS_KEY_ID ?? (awsFallback ? config.AWS_ACCESS_KEY_ID : undefined);
+  const secretAccessKey = config.S3_SECRET_ACCESS_KEY ?? (awsFallback ? config.AWS_SECRET_ACCESS_KEY : undefined);
+  if (!accessKeyId || !secretAccessKey) {
+    throw new Error(
+      runningOnLambda()
+        ? 'object storage credentials missing: on Netlify Functions set S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY (AWS_* names are reserved by Lambda)'
+        : `object storage credentials missing for STORAGE_DRIVER=${config.STORAGE_DRIVER}`,
+    );
+  }
   if (neon && !endpoint) throw new Error('STORAGE_DRIVER=neon needs AWS_ENDPOINT_URL_S3 (from `neon env pull`) or S3_ENDPOINT');
-  return { endpoint, region: config.S3_REGION_OVERRIDE ?? (neon ? (config.AWS_REGION ?? config.S3_REGION) : config.S3_REGION), accessKeyId, secretAccessKey, forcePathStyle: neon ? true : config.S3_FORCE_PATH_STYLE };
+  const region = config.S3_REGION_OVERRIDE ?? (awsFallback ? (config.AWS_REGION ?? config.S3_REGION) : config.S3_REGION);
+  return { endpoint, region, accessKeyId, secretAccessKey, forcePathStyle: neon ? true : config.S3_FORCE_PATH_STYLE };
 }
 
 export class S3ObjectStorage implements ObjectStorage {

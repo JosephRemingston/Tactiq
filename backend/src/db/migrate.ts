@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { loadConfig } from '../config/env';
+import { databaseUrlFromEnv } from '../config/env';
 import { createDb, type DbHandle } from './client';
 
 export const MIGRATIONS_FOLDER = join(__dirname, 'migrations');
@@ -12,8 +12,8 @@ export async function runMigrations(handle: DbHandle): Promise<void> {
 }
 
 if (require.main === module) {
-  const config = loadConfig();
-  const handle = createDb(config.DATABASE_URL, 2);
+  // Only DATABASE_URL is needed, so this can run in a build step without the full runtime configuration.
+  const handle = createDb(databaseUrlFromEnv(), 2);
   runMigrations(handle)
     .then(() => console.log('migrations applied'))
     .catch((err) => {

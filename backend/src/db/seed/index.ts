@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { sql } from 'drizzle-orm';
-import { loadConfig } from '../../config/env';
+import { databaseUrlFromEnv } from '../../config/env';
 import { createDb, type Db } from '../client';
 import { dataLicences, metricDefinitions, planDefinitions, tacticalConcepts, type PlanFeature } from '../schema';
 
@@ -79,8 +79,8 @@ export async function seed(db: Db): Promise<Record<string, number>> {
 }
 
 if (require.main === module) {
-  const config = loadConfig();
-  const handle = createDb(config.DATABASE_URL, 2);
+  // Only DATABASE_URL is needed, so this can run in a build step without the full runtime configuration.
+  const handle = createDb(databaseUrlFromEnv(), 2);
   seed(handle.db)
     .then((counts) => console.log('seeded', counts))
     .catch((err) => {

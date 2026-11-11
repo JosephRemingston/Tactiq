@@ -78,8 +78,8 @@ data/                              metric definitions, glossary, plans, xT grid,
 test/                              unit, e2e, StatsBomb fixtures
 ```
 
-More detail: [data model](../docs/data-model.md), [metrics and insights](../docs/metrics.md),
-[operations runbook](../docs/runbook.md), [metric hand-checks](../docs/metric-hand-checks.md).
+More detail: [data model](backend/docs/data-model.md), [metrics and insights](backend/docs/metrics.md),
+[operations runbook](backend/docs/runbook.md), [metric hand-checks](backend/docs/metric-hand-checks.md), [Netlify deployment](backend/docs/deploy-netlify.md).
 
 Data attribution: StatsBomb Open Data (Hudl StatsBomb). Its licence does not allow commercial redistribution;
 production needs a licensed feed (see `data/data_licences.json`).
