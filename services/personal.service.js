@@ -273,7 +273,7 @@ export class PersonalService {
       .insert(userCollections)
       .values({ ownerUserId: userId, name: input.name, description: input.description ?? null })
       .returning();
-    return { ...c, items: [] };
+    return { id: c.id, name: c.name, description: c.description, createdAt: c.createdAt, updatedAt: c.updatedAt, items: [] };
   }
   async getCollection(userId, id) {
     const c = await this.ownedCollection(userId, id);

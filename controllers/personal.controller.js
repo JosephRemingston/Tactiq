@@ -136,13 +136,13 @@ const deleteCollection = asyncHandler(async (req, res) => {
 
 const addCollectionItem = asyncHandler(async (req, res) => {
   const result = await services().personal.addCollectionItem(req.user.id, req.valid.params.id, req.valid.body);
-  return ApiResponse.success(res, "Item added to collection successfully", result);
+  return ApiResponse.success(res, "Item added to collection successfully", { collection: result });
 });
 
 const removeCollectionItem = asyncHandler(async (req, res) => {
   const { id, itemType, itemId } = req.valid.params;
   const result = await services().personal.removeCollectionItem(req.user.id, id, itemType, itemId);
-  return ApiResponse.success(res, "Item removed from collection successfully", result);
+  return ApiResponse.success(res, "Item removed from collection successfully", { collection: result });
 });
 
 const getLearning = asyncHandler(async (req, res) => {
