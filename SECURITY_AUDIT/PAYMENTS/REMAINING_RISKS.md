@@ -19,7 +19,7 @@ All Google behaviour here was modelled with the fake verifier and mocked HTTP. N
 
 | ID | Risk | Action |
 |---|---|---|
-| PR-7 | **Migration `0003_payment_integrity.sql` is not applied to production Neon.** Until it is, the unique indexes and CHECK constraints do not exist there; the advisory lock and code checks still apply | Run `npx drizzle-kit migrate` against Neon (production has 0 purchases, so it applies cleanly; check `select provider_subscription_id, count(*) from subscriptions where provider_subscription_id is not null group by 1 having count(*) > 1` first) |
+| PR-7 | **Closed 12 November 2026.** Migration `0003_payment_integrity.sql` is applied to production Neon. The duplicate check found no rows (the billing tables were empty), and all 8 indexes and CHECK constraints were confirmed present afterwards | None |
 | PR-8 | Advisory locks were tested on local Postgres 17, not through Neon's pooler. Transaction-scoped locks are compatible with transaction pooling by design | Run `tests/payments.test.js` once against a Neon branch |
 | PR-9 | `fetchedAt` uses each serverless instance's clock. Clock skew larger than the gap between two reads could discard a newer non-refund answer as stale. The next read corrects it; refunds are never discarded | Accept (instance clocks are NTP-synced), or move to a database-issued sequence |
 | PR-10 | Notifications are authenticated by a shared token in the push URL (earlier audit R-7) | Switch Pub/Sub push to OIDC and verify Google-signed JWTs |

@@ -5,9 +5,7 @@ Open items from the security audit (`SECURITY_AUDIT/REMAINING_RISKS.md`, R-*) an
 ## Now
 
 - [ ] Commit and push the payment audit: billing service, migration 0003, tests, `SECURITY_AUDIT/PAYMENTS/`, `docs/API.md`.
-- [ ] Apply migration `0003_payment_integrity.sql` to production Neon (PR-7). First check for duplicates:
-      `select provider_subscription_id, count(*) from subscriptions where provider_subscription_id is not null group by 1 having count(*) > 1`
-      then run `npx drizzle-kit migrate`.
+- [x] Apply migration `0003_payment_integrity.sql` to production Neon (PR-7). Applied 12 November 2026 after a clean duplicate check; all 8 indexes and constraints confirmed present.
 
 ## Before the first deploy
 

@@ -81,11 +81,11 @@ export const envSchema = z.object({
   ADMOB_BANNER_UNIT_ID: optStr(),
 });
 
-const here = dirname(fileURLToPath(import.meta.url));
-
 /** Env files in precedence order (earlier files win; real environment variables always win). */
 export function envFiles() {
-  const root = resolve(here, "..");
+  // Resolved lazily: Netlify bundles functions to CommonJS, where import.meta.url is undefined, and
+  // fileURLToPath(undefined) at module load crashes the function. envFiles() never runs there anyway.
+  const root = import.meta.url ? resolve(dirname(fileURLToPath(import.meta.url)), "..") : process.cwd();
   const candidates = [resolve(root, ".env.local"), resolve(root, ".env")];
   return [...new Set(candidates)].filter((f) => existsSync(f));
 }
