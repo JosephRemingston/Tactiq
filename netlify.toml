@@ -14,8 +14,10 @@
   NODE_VERSION = "22"
   NODE_ENV = "production"
   # Values here apply to the build only. Functions read runtime variables set in the Netlify UI or CLI.
-  # Clerk publishable keys are public by design and end up in the frontend bundle; don't fail the secret scan on them.
-  SECRETS_SCAN_OMIT_KEYS = "VITE_CLERK_PUBLISHABLE_KEY,CLERK_PUBLISHABLE_KEY"
+  # Secret scanning stays on for real secrets (keys, passwords, connection strings). These keys hold plain settings
+  # whose values legitimately appear in code and docs ("production", "neon", "github", the bucket name, the region,
+  # the site origin), and Clerk publishable keys are public by design and ship in the frontend bundle.
+  SECRETS_SCAN_OMIT_KEYS = "VITE_CLERK_PUBLISHABLE_KEY,CLERK_PUBLISHABLE_KEY,NODE_ENV,RUN_MIGRATIONS,STORAGE_DRIVER,S3_BUCKET_RAW,S3_REGION_OVERRIDE,STATSBOMB_SOURCE,STATSBOMB_COMPETITION_ALLOWLIST,CLERK_AUTHORIZED_PARTIES"
   SECRETS_SCAN_OMIT_PATHS = "backend/test/fixtures/**"
 
 [functions]
