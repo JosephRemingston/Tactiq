@@ -17,7 +17,8 @@ const receiveClerkWebhook = asyncHandler(async (req, res) => {
   try {
     event = await identity.verifyWebhook(req.body, req.headers);
   } catch (err) {
-    if (err instanceof ApiError && err.statusCode === 503) throw err; // signing secret not configured
+    // Signing secret not configured (503) or a correctly signed but malformed event (400).
+    if (err instanceof ApiError && (err.statusCode === 503 || err.statusCode === 400)) throw err;
     await security.record("webhook_rejected", { ip: clientIp(req), metadata: { reason: err.message } });
     throw ApiError.unauthorized("Invalid webhook signature");
   }

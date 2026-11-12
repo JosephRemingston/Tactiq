@@ -1,4 +1,4 @@
-import { createSign } from "node:crypto";
+import { createHash, createSign } from "node:crypto";
 import { getEnv } from "./env.js";
 
 /**
@@ -117,14 +117,31 @@ export class FakePurchaseVerifier {
   constructor() {
     this.acknowledged = new Set();
     this.overrides = new Map();
+    this.failure = null;
+    this.calls = 0;
   }
 
-  /** Test hook: make later lookups of `token` return a different state (simulates a renewal, refund, expiry). */
-  setState(token, state, daysUntilExpiry) {
-    this.overrides.set(token, { state, daysUntilExpiry });
+  /**
+   * Test hook: make later lookups of `token` return a different state (simulates a renewal, refund, expiry).
+   * `extra` can set e.g. { linkedPurchaseToken, orderId }.
+   */
+  setState(token, state, daysUntilExpiry, extra = {}) {
+    this.overrides.set(token, { state, daysUntilExpiry, extra });
+  }
+
+  /** Test hook: every store call throws `err` until cleared with failWith(null) (simulates a Google outage). */
+  failWith(err) {
+    this.failure = err;
+  }
+
+  /** The order id the fake store reports for a token: stable per token, like Google's latest order id. */
+  static orderIdFor(token) {
+    return `GPA.fake-${createHash("sha256").update(String(token)).digest("hex").slice(0, 12)}`;
   }
 
   async getSubscription(purchaseToken) {
+    this.calls += 1;
+    if (this.failure) throw this.failure;
     const [prefix, productId, state, days, account] = String(purchaseToken).split(":");
     if (prefix !== "fake" || !productId || !state) throw new PurchaseNotFoundError();
     const o = this.overrides.get(purchaseToken);
@@ -135,17 +152,19 @@ export class FakePurchaseVerifier {
       state: effState,
       startedAt: new Date(Date.now() - 86_400_000),
       expiresAt: new Date(Date.now() + effDays * 86_400_000),
-      orderId: `GPA.fake-${purchaseToken.length}`,
+      orderId: FakePurchaseVerifier.orderIdFor(purchaseToken),
       autoRenewing: effState === "active",
       acknowledged: this.acknowledged.has(purchaseToken),
       linkedPurchaseToken: null,
-      obfuscatedAccountId: account ?? null,
+      obfuscatedAccountId: account || null,
       testPurchase: true,
       raw: { fake: true, state: effState },
+      ...(o?.extra ?? {}),
     };
   }
 
   async acknowledge(productId, purchaseToken) {
+    if (this.failure) throw this.failure;
     this.acknowledged.add(purchaseToken);
   }
 }

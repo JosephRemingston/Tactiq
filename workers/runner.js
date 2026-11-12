@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { ingestionJobs } from "../models/index.js";
 import { envelopeOf } from "../queues/queue.js";
 import { Logger } from "../utils/logger.js";
@@ -56,15 +56,25 @@ export class JobRunner {
     return Math.round(exp + Math.random() * Math.min(5000, base));
   }
 
-  /** Jobs left 'active' by a run that was killed go back to 'queued'. */
+  /**
+   * Jobs left 'active' by a run that was killed go back to 'queued', unless that was their last attempt: then
+   * they are 'dead' (visible, replayable) instead of sitting in 'queued' where no runner will ever claim them.
+   */
   async recoverStale() {
+    const stale = sql`${ingestionJobs.status} = 'active' and ${ingestionJobs.lockedAt} < now() - make_interval(mins => ${STALE_LOCK_MINUTES})`;
+    const dead = await this.db
+      .update(ingestionJobs)
+      .set({ status: "dead", lockedAt: null, finishedAt: new Date(), lastError: "worker stopped during the final attempt" })
+      .where(and(stale, sql`${ingestionJobs.attempts} >= ${ingestionJobs.maxAttempts}`))
+      .returning({ jobId: ingestionJobs.jobId });
     const rows = await this.db
       .update(ingestionJobs)
       .set({ status: "queued", lockedAt: null })
-      .where(sql`${ingestionJobs.status} = 'active' and ${ingestionJobs.lockedAt} < now() - make_interval(mins => ${STALE_LOCK_MINUTES})`)
+      .where(stale)
       .returning({ jobId: ingestionJobs.jobId });
     if (rows.length) this.logger.warn(`re-queued ${rows.length} stale job(s)`);
-    return rows.length;
+    if (dead.length) this.logger.warn(`marked ${dead.length} stale job(s) dead after their final attempt`);
+    return rows.length + dead.length;
   }
 
   /** Claims the next runnable job. SKIP LOCKED keeps two runners from taking the same row. */

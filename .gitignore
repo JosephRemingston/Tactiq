@@ -10,3 +10,8 @@ coverage/
 
 # Local Netlify folder
 .netlify
+
+# Security audit: the reports in SECURITY_AUDIT/*.md are committed; working copies of the source and run
+# metadata from automated review tooling are not.
+SECURITY_AUDIT/agents/
+SECURITY_AUDIT/*.json

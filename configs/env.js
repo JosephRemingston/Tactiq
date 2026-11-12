@@ -61,6 +61,8 @@ export const envSchema = z.object({
   CORS_ORIGINS: z.string().default(""),
   THROTTLE_IP_PER_MIN: z.coerce.number().int().positive().default(120),
   THROTTLE_USER_PER_MIN: z.coerce.number().int().positive().default(600),
+  /** Per-IP backstop for every request (in-memory, per instance), above the anonymous and per-user limits. */
+  THROTTLE_IP_BACKSTOP_PER_MIN: z.coerce.number().int().positive().default(1200),
   CACHE_TTL_MATCH_SECONDS: z.coerce.number().int().positive().default(60),
   /** Proxy hops whose X-Forwarded-For may be trusted (Express "trust proxy"). Unset: not trusted. */
   TRUST_PROXY: z.coerce.number().int().nonnegative().optional(),
@@ -94,7 +96,9 @@ let cached = null;
 export function getEnv(overrides = {}) {
   if (cached && Object.keys(overrides).length === 0) return cached;
   // Hosted runtimes (Netlify, GitHub Actions) inject real variables; .env files only exist on a developer machine.
-  if (!cached && !process.env.NETLIFY && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  // Tests never read them: a developer's .env holds production credentials, and a test that forgot to set a
+  // variable must fail rather than silently pick up a real database or key.
+  if (!cached && !process.env.NETLIFY && !process.env.AWS_LAMBDA_FUNCTION_NAME && process.env.NODE_ENV !== "test") {
     for (const file of envFiles()) {
       try {
         process.loadEnvFile(file);

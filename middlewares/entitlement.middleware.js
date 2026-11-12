@@ -16,7 +16,7 @@ export const matchSubject =
  *   - not in the plan            -> 403 ENTITLEMENT_REQUIRED
  *   - period limit reached       -> 403 ENTITLEMENT_EXCEEDED
  *   - allowed                    -> handler runs, `x-entitlement-remaining` is set
- * If the handler then fails with a server error, the charge is refunded.
+ * If the handler then fails for any reason, the charge is refunded.
  * Use after `authenticate`.
  */
 export const metered = (featureKey, subjectOf, handler) =>
@@ -30,8 +30,9 @@ export const metered = (featureKey, subjectOf, handler) =>
     try {
       return await handler(req, res, next);
     } catch (err) {
-      const serverError = !(err instanceof ApiError) || err.statusCode >= 500;
-      if (result.charged && serverError && result.entitlement.periodKey) {
+      // Whatever went wrong (missing match 404, unanalysed match 409, server error), the user got nothing,
+      // so the unit just charged is returned.
+      if (result.charged && result.entitlement.periodKey) {
         await entitlements.refund(user.id, featureKey, subject, result.entitlement.periodKey).catch(() => undefined);
       }
       throw err;

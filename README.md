@@ -72,11 +72,24 @@ node worker.js                                                       # or: drain
 ### Tests
 
 ```sh
-npm test                                                                        # unit tests only
-TEST_DATABASE_URL=postgres://touchline:touchline@localhost:5432/touchline_e2e npm test   # plus end-to-end API tests
+npm test                                                                                  # unit tests only
+TEST_DATABASE_URL=postgres://touchline:touchline@localhost:5432/touchline_test npm test    # plus integration and security tests
+TEST_DATABASE_URL=postgres://touchline:touchline@localhost:5432/touchline_test npm run test:coverage
 ```
 
-The end-to-end suite migrates the given database, wipes user data and job rows, ingests the two fixture matches through the real job chain, and runs the API with test-signed Clerk tokens and the fake purchase verifier. Point it only at a disposable database.
+The database tests migrate the given database, ingest the two fixture matches through the real job chain, and run the real app with test-signed Clerk tokens and the fake purchase verifier. They refuse to run against any host other than `localhost`, `127.0.0.1` or the CI service `postgres`, and test processes never read `.env` files. Point `TEST_DATABASE_URL` only at a disposable database.
+
+Test files: `tests/security.*.test.js` cover authentication, authorization (IDOR/BOLA/BFLA), input validation and fuzzing, billing, entitlements, webhooks, HTTP headers/CORS/rate limits, jobs, failure injection and the API contract. Fuzz inputs are seeded (`FUZZ_SEED`) so failures reproduce.
+
+### Security checks
+
+```sh
+npm run security:audit     # production dependencies: no high/critical advisories
+npm run security:secrets   # Gitleaks over the full git history (Docker)
+npm run security:sast      # Semgrep: JS, Node, Express, OWASP Top 10, JWT and secrets rules (Docker)
+```
+
+The same checks run in `.github/workflows/security.yml`. The audit report is in `SECURITY_AUDIT/`.
 
 ## API
 
@@ -197,7 +210,8 @@ The API then rejects requests that did not come through Cloudflare, and rate lim
 ## Security notes
 
 - The user id always comes from the verified Clerk token, never from the request.
-- Private requests are rate limited per IP (anonymous) and per user (signed in) in Upstash. Job creation and purchase verification have tighter limits.
+- Requests are rate limited per IP (anonymous) and per user (signed in) in Upstash, with an in-memory fallback so limits never switch off when Redis is unavailable. Job creation, purchase verification, webhooks and readiness checks have their own tighter limits, and a per-IP backstop covers every request.
+- Authenticated responses are sent with `Cache-Control: private, no-store`; error logs record error codes and routes, never request data.
 - Requests are validated with strict zod schemas: unknown fields are rejected and the body limit is 256 KB.
 - Both webhooks are signed and protected against replay.
 - `security_events` records sign-ups, account deletion, session revocation, purchase verification and rejected webhooks.

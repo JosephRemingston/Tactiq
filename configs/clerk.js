@@ -126,6 +126,10 @@ export async function verifyWebhook(rawBody, headers) {
   for (const [k, v] of Object.entries(headers)) if (typeof v === "string") h.set(k, v);
   const request = new Request("http://localhost/v1/webhooks/clerk", { method: "POST", headers: h, body: new Uint8Array(rawBody) });
   const evt = await clerkVerifyWebhook(request, { signingSecret: secret });
+  // The signature proves who sent it, not that it is well formed: check the shape before anything reads it.
+  if (!evt || typeof evt !== "object" || Array.isArray(evt) || typeof evt.type !== "string" || !evt.data || typeof evt.data !== "object") {
+    throw ApiError.badRequest("Malformed webhook event");
+  }
   const id = h.get("svix-id") ?? h.get("webhook-id") ?? "";
   return { id, type: evt.type, data: evt.data };
 }

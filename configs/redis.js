@@ -28,13 +28,19 @@ export const getRedis = () => {
     if (creds) {
       redisClient = new Redis({ url: creds.url, token: creds.token, retry: { retries: 1 } });
     } else {
-      console.warn("Redis is not configured (REDIS_URL is missing or not an Upstash URL): caching and rate limits are off");
+      console.warn("Redis is not configured (REDIS_URL is missing or not an Upstash URL): caching is off and rate limits are counted in memory per instance");
     }
   }
   return redisClient;
 };
 
 export const isRedisAvailable = () => getRedis() !== null;
+
+/** Test hook: use `client` (a fake or a deliberately failing one) instead of Upstash; null means "no Redis". */
+export function setRedisClientForTests(client) {
+  redisClient = client;
+  resolved = true;
+}
 
 export const connectRedis = async () => {
   const redis = getRedis();

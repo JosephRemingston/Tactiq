@@ -217,7 +217,7 @@ export class AnalyticsService {
     const conds = [eq(matchPossessions.matchId, matchId)];
     if (q.teamId) conds.push(eq(matchPossessions.teamId, q.teamId));
     if (q.endType) conds.push(eq(matchPossessions.endType, q.endType));
-    const cursor = decodeCursor(q.cursor);
+    const cursor = decodeCursor(q.cursor, ["int", "string"]);
     if (cursor) conds.push(gt(matchPossessions.possessionId, Number(cursor[0])));
     const rows = await this.db
       .select()

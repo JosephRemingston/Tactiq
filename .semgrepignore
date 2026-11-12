@@ -1,0 +1,6 @@
+node_modules/
+tests/fixtures/
+.data/
+SECURITY_AUDIT/
+coverage/
+docs/

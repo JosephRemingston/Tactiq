@@ -86,4 +86,9 @@ export function getStorage() {
   return storage;
 }
 
+/** Test hook: forget the storage client so the next call re-reads the environment. */
+export function resetStorage() {
+  storage = null;
+}
+
 export default getStorage;

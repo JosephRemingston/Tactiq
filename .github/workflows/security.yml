@@ -1,0 +1,50 @@
+name: security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "23 4 * * 1" # weekly, to catch newly published advisories
+
+permissions:
+  contents: read
+
+jobs:
+  dependencies:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      # Production dependencies must have no high or critical advisories. Dev-only tooling (drizzle-kit)
+      # is reported but does not ship.
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm audit --audit-level=critical
+
+  secrets:
+    name: Secret scan (full history)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: Gitleaks
+        run: >-
+          docker run --rm -v "$GITHUB_WORKSPACE":/repo ghcr.io/gitleaks/gitleaks:v8.30.1
+          git /repo --config /repo/.gitleaks.toml --redact --no-banner --exit-code 1
+
+  static-analysis:
+    name: Static analysis (Semgrep)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Semgrep
+        # Fails on ERROR-severity findings; WARNING/INFO are reported in the log for review.
+        run: >-
+          docker run --rm -v "$GITHUB_WORKSPACE":/src -w /src semgrep/semgrep:1.184.0
+          semgrep scan --metrics=off --error --severity ERROR
+          --config p/javascript --config p/nodejsscan --config p/expressjs
+          --config p/owasp-top-ten --config p/jwt --config p/secrets

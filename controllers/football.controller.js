@@ -1,15 +1,12 @@
 import { z } from "zod";
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiResponse from "../utils/ApiResponse.js";
-import { pageQuery } from "../utils/pagination.js";
+import { intParam, isoDateParam, pageQuery } from "../utils/pagination.js";
 import { named } from "../utils/respond.js";
 import { services } from "../services/index.js";
 
 const optUuid = z.uuid().optional();
-const isoDate = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}(T.*)?$/, "ISO date expected")
-  .optional();
+const isoDate = isoDateParam().optional();
 const csv = (item) =>
   z
     .string()
@@ -48,18 +45,18 @@ export const schemas = {
     teamId: optUuid,
     playerId: optUuid,
     type: csv(z.string().regex(/^[a-z_]+$/)),
-    period: z.coerce.number().int().min(1).max(5).optional(),
-    possessionId: z.coerce.number().int().positive().optional(),
+    period: intParam(1, 5).optional(),
+    possessionId: intParam(1, 100_000).optional(),
     include: z.enum(["raw"]).optional(),
   }),
   searchQuery: z.object({
     q: z.string().trim().min(2).max(80),
     types: csv(z.enum(["team", "competition", "player", "concept"])),
-    limit: z.coerce.number().int().min(1).max(25).default(8),
+    limit: intParam(1, 25).default(8),
   }),
   conceptsQuery: z.object({ category: z.string().max(40).optional() }),
   metricDefinitionsQuery: z.object({ family: z.string().max(40).optional() }),
-  metricDefinitionQuery: z.object({ version: z.coerce.number().int().positive().optional() }),
+  metricDefinitionQuery: z.object({ version: intParam(1, 10_000).optional() }),
 };
 
 const listCompetitions = asyncHandler(async (req, res) => {

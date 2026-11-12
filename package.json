@@ -15,10 +15,14 @@
     "dev": "node --watch index.js",
     "start": "node index.js",
     "cli": "node cli.js",
-    "test": "node --test \"tests/*.test.js\"",
+    "test": "node --test --test-concurrency=1 \"tests/*.test.js\"",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node cli.js db:migrate",
-    "db:seed": "node cli.js db:seed"
+    "db:seed": "node cli.js db:seed",
+    "test:coverage": "node --test --test-concurrency=1 --experimental-test-coverage --test-coverage-exclude=\"tests/**\" --test-coverage-exclude=\"node_modules/**\" \"tests/*.test.js\"",
+    "security:audit": "npm audit --omit=dev --audit-level=high",
+    "security:secrets": "docker run --rm -v \"$PWD\":/repo ghcr.io/gitleaks/gitleaks:v8.30.1 git /repo --config /repo/.gitleaks.toml --redact --no-banner",
+    "security:sast": "docker run --rm -v \"$PWD\":/src -w /src semgrep/semgrep:1.184.0 semgrep scan --metrics=off --error --severity ERROR --config p/javascript --config p/nodejsscan --config p/expressjs --config p/owasp-top-ten --config p/jwt --config p/secrets"
   },
   "dependencies": {
     "@clerk/backend": "^3.27.0",

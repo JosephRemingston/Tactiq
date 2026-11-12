@@ -87,23 +87,34 @@ export class PersonalService {
     return { [entity + "Id"]: id, following: on };
   }
   // ---- saved items (limit: following.max_saved_items across matches + insights) ----
-  async savedCount(userId) {
+  /**
+   * Runs `fn` in a transaction holding a per-user advisory lock, so "count, check limit, insert" cannot be
+   * interleaved by parallel requests from the same user (which would let them save past their limit).
+   */
+  withSavedItemsLock(userId, fn) {
+    return this.db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${"saved-items:" + userId}, 0))`);
+      return fn(tx);
+    });
+  }
+  async savedCount(userId, ex = this.db) {
     const [[m], [i]] = await Promise.all([
-      this.db.select({ n: count() }).from(savedMatches).where(eq(savedMatches.userId, userId)),
-      this.db.select({ n: count() }).from(savedInsights).where(eq(savedInsights.ownerUserId, userId)),
+      ex.select({ n: count() }).from(savedMatches).where(eq(savedMatches.userId, userId)),
+      ex.select({ n: count() }).from(savedInsights).where(eq(savedInsights.ownerUserId, userId)),
     ]);
     return (m?.n ?? 0) + (i?.n ?? 0);
   }
   async saveMatch(userId, matchId) {
     await this.assertEntity("match", matchId);
-    const [exists] = await this.db
-      .select({ m: savedMatches.matchId })
-      .from(savedMatches)
-      .where(and(eq(savedMatches.userId, userId), eq(savedMatches.matchId, matchId)));
-    if (!exists) {
-      await this.entitlements.assertWithinCount(userId, "following.max_saved_items", await this.savedCount(userId));
-      await this.db.insert(savedMatches).values({ userId, matchId }).onConflictDoNothing();
-    }
+    await this.withSavedItemsLock(userId, async (tx) => {
+      const [exists] = await tx
+        .select({ m: savedMatches.matchId })
+        .from(savedMatches)
+        .where(and(eq(savedMatches.userId, userId), eq(savedMatches.matchId, matchId)));
+      if (exists) return;
+      await this.entitlements.assertWithinCount(userId, "following.max_saved_items", await this.savedCount(userId, tx));
+      await tx.insert(savedMatches).values({ userId, matchId }).onConflictDoNothing();
+    });
     return { matchId, saved: true };
   }
   async unsaveMatch(userId, matchId) {
@@ -111,7 +122,7 @@ export class PersonalService {
     return { matchId, saved: false };
   }
   async savedMatches(userId, limit, cursor) {
-    const c = decodeCursor(cursor);
+    const c = decodeCursor(cursor, ["date", "uuid"]);
     const ids = await this.db
       .select({ matchId: savedMatches.matchId, savedAt: savedMatches.createdAt })
       .from(savedMatches)
@@ -141,14 +152,15 @@ export class PersonalService {
   async saveInsight(userId, insightId) {
     const [ins] = await this.db.select({ id: insights.id, matchId: insights.matchId }).from(insights).where(eq(insights.id, insightId));
     assertFound(ins, "Insight");
-    const [exists] = await this.db
-      .select({ id: savedInsights.id })
-      .from(savedInsights)
-      .where(and(eq(savedInsights.ownerUserId, userId), eq(savedInsights.insightId, insightId)));
-    if (!exists) {
-      await this.entitlements.assertWithinCount(userId, "following.max_saved_items", await this.savedCount(userId));
-      await this.db.insert(savedInsights).values({ ownerUserId: userId, insightId, matchId: ins.matchId }).onConflictDoNothing();
-    }
+    await this.withSavedItemsLock(userId, async (tx) => {
+      const [exists] = await tx
+        .select({ id: savedInsights.id })
+        .from(savedInsights)
+        .where(and(eq(savedInsights.ownerUserId, userId), eq(savedInsights.insightId, insightId)));
+      if (exists) return;
+      await this.entitlements.assertWithinCount(userId, "following.max_saved_items", await this.savedCount(userId, tx));
+      await tx.insert(savedInsights).values({ ownerUserId: userId, insightId, matchId: ins.matchId }).onConflictDoNothing();
+    });
     return { insightId, saved: true };
   }
   async unsaveInsight(userId, insightId) {
@@ -156,7 +168,7 @@ export class PersonalService {
     return { insightId, saved: false };
   }
   async savedInsights(userId, limit, cursor) {
-    const c = decodeCursor(cursor);
+    const c = decodeCursor(cursor, ["date", "uuid"]);
     const rows = await this.db
       .select({
         id: savedInsights.id,
@@ -194,7 +206,7 @@ export class PersonalService {
     const conds = [eq(userNotes.ownerUserId, userId), isNull(userNotes.deletedAt)];
     if (q.subjectType) conds.push(eq(userNotes.subjectType, q.subjectType));
     if (q.subjectId) conds.push(eq(userNotes.subjectId, q.subjectId));
-    const c = decodeCursor(q.cursor);
+    const c = decodeCursor(q.cursor, ["date", "uuid"]);
     if (c) conds.push(sql`(${userNotes.createdAt}, ${userNotes.id}) < (${new Date(String(c[0]))}, ${c[1]})`);
     const rows = await this.db
       .select()

@@ -77,8 +77,18 @@ export class UsersService {
             avatarUrl: sql`coalesce(excluded.avatar_url, ${users.avatarUrl})`,
             updatedAt: new Date(),
           },
+          // A deleted account is never updated again: a late or replayed Clerk webhook must not write the
+          // scrubbed email, name or avatar back, or re-link identities.
+          setWhere: sql`${users.status} = 'active'`,
         })
         .returning({ id: users.id, depthPreference: users.depthPreference, status: users.status, created: sql`(xmax = 0)` });
+      if (!row) {
+        const [deleted] = await tx
+          .select({ id: users.id, depthPreference: users.depthPreference, status: users.status })
+          .from(users)
+          .where(eq(users.clerkUserId, profile.clerkUserId));
+        return { user: { ...deleted, created: false }, created: false };
+      }
       const user = row;
       for (const identity of profile.identities) {
         await tx

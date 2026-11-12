@@ -53,7 +53,15 @@ Every response:
 | 500 | `INTERNAL` | Server error | Generic error + retry |
 | 503 | `BILLING_NOT_CONFIGURED` / `PROVIDER_UNAVAILABLE` | Billing not live yet / upstream down | Hide purchase UI / retry later |
 
-Useful response headers: `x-request-id`, `x-entitlement-remaining` (units left this period on metered routes), `retry-after` (on 429 and 202).
+Useful response headers: `x-request-id`, `x-entitlement-remaining` (units left this period on metered routes), `retry-after` (on 429 and 202). Responses to requests with an `Authorization` header carry `Cache-Control: private, no-store`; do not cache them in shared storage.
+
+Validation is strict. Expect 400 `VALIDATION_FAILED` for:
+- Unknown body fields.
+- Text containing a NUL character (`\u0000`).
+- JSON nested more than 32 levels deep.
+- Numbers not written as plain digits (`0x10`, `1e3`, ` 5 ` are rejected).
+- Dates that do not exist (`2023-02-29`).
+- Pagination cursors that were modified rather than taken from `page.nextCursor`.
 
 ---
 
@@ -393,7 +401,7 @@ Query: `depth`. The match story (PDF "match story layout").
 
 ### 6.4 Analysis views (signed in, metered)
 
-These are the Explore/Advanced screens. Each call needs a token and is metered by `analysis.matches_per_month`: **opening any number of these views for the same match costs 1 unit per calendar month**. The response header `x-entitlement-remaining` shows units left (absent when unlimited). They also check `history.seasons_back` (Free: latest 2 seasons of a competition). Returns 409 if the match was never analysed.
+These are the Explore/Advanced screens. Each call needs a token and is metered by `analysis.matches_per_month`: **opening any number of these views for the same match costs 1 unit per calendar month**. The response header `x-entitlement-remaining` shows units left (absent when unlimited). A request that fails for any reason (404, 409, server error) is not charged. They also check `history.seasons_back` (Free: latest 2 seasons of a competition). Returns 409 if the match was never analysed.
 
 Common fields in each view: `matchId`, `analysisRunId`, `analyticsVersion`, `analysedAt`.
 

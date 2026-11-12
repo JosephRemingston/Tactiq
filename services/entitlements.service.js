@@ -71,8 +71,16 @@ export class EntitlementsService {
     await this.cache.del(this.cacheKey(userId));
   }
   async resolve(userId, featureKey, now = new Date()) {
-    const rows = (await this.activeRows(userId)).filter(
+    const granted = (await this.activeRows(userId)).filter(
       (r) => r.featureKey === featureKey && (!r.validUntil || new Date(r.validUntil) > now),
+    );
+    // A grant records which plan it came from; its limit is read from that plan's current definition, so editing
+    // data/plans.json (and re-seeding) applies to existing users, not only to new sign-ups and new purchases.
+    const rows = await Promise.all(
+      granted.map(async (r) => {
+        const current = (await this.planFeatures(r.sourcePlan).catch(() => null))?.[featureKey];
+        return current ? { ...r, limitValue: current.limitValue, usagePeriod: current.usagePeriod } : r;
+      }),
     );
     let chosen;
     if (rows.length === 0) {

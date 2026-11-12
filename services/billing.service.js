@@ -8,6 +8,14 @@ import { PurchaseNotFoundError } from "../configs/googlePlay.js";
 
 const PRODUCTS = new Map(PLANS.products.map((p) => [p.productId, p]));
 
+/** Thrown inside the purchase transaction when the token belongs to a different account; rolls everything back. */
+class PurchaseOwnershipError extends Error {
+  constructor() {
+    super("purchase token belongs to another account");
+    this.name = "PurchaseOwnershipError";
+  }
+}
+
 /** States in which the user keeps Pro access (cancelled: until the paid-through date). */
 const ENTITLED_STATES = new Set(["active", "grace", "cancelled"]);
 
@@ -143,7 +151,14 @@ export class BillingService {
       throw ApiError.forbidden("This purchase was made for a different account", "PURCHASE_ACCOUNT_MISMATCH");
     }
 
-    const purchase = await this.applyState(userId, purchaseToken, product, verified, "verify");
+    let purchase;
+    try {
+      purchase = await this.applyState(userId, purchaseToken, product, verified, "verify");
+    } catch (err) {
+      if (!(err instanceof PurchaseOwnershipError)) throw err;
+      await this.security.record("purchase_token_reuse", { userId, ip: meta.ip, metadata: { productId, concurrent: true } });
+      throw ApiError.conflict("This purchase is linked to another account");
+    }
     await this.acknowledgeIfNeeded(purchase, verified);
     await this.security.record("purchase_verified", { userId, ip: meta.ip, metadata: { productId, state: purchase.state } });
     const [fresh] = await this.db.select().from(purchases).where(eq(purchases.id, purchase.id));
@@ -155,7 +170,13 @@ export class BillingService {
     this.requireConfigured();
     const rows = await this.db.select().from(purchases).where(eq(purchases.userId, userId));
     const results = [];
-    for (const row of rows) results.push(await this.refreshPurchase(row, "restore"));
+    try {
+      for (const row of rows) results.push(await this.refreshPurchase(row, "restore"));
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      // Google unreachable: nothing was changed for the purchases not yet re-read; the app can simply retry.
+      throw ApiError.unavailable("Could not reach the store to restore purchases");
+    }
     await this.security.record("purchases_restored", { userId, ip: meta.ip, metadata: { count: rows.length } });
     return { purchases: results.filter(Boolean).map((p) => this.purchaseView(p)), plan: await this.entitlements.currentPlan(userId) };
   }
@@ -244,6 +265,10 @@ export class BillingService {
           },
         })
         .returning();
+
+      // The upsert holds the row lock until commit, so this check cannot race: a token that already belongs to
+      // another account is never re-pointed or granted twice (two accounts verifying one token concurrently).
+      if (purchase.userId !== userId) throw new PurchaseOwnershipError();
 
       // An upgrade, downgrade or resubscribe replaces the old token: its access ends now.
       if (v.linkedPurchaseToken) {
@@ -349,7 +374,7 @@ export class BillingService {
     } catch {
       throw ApiError.badRequest("Notification data is not valid JSON");
     }
-    if (this.config.GOOGLE_PLAY_PACKAGE_NAME && data.packageName && data.packageName !== this.config.GOOGLE_PLAY_PACKAGE_NAME) {
+    if (this.config.GOOGLE_PLAY_PACKAGE_NAME && data.packageName !== this.config.GOOGLE_PLAY_PACKAGE_NAME) {
       throw ApiError.badRequest("Notification is for a different app");
     }
 
@@ -380,7 +405,10 @@ export class BillingService {
       return { status: "ignored" };
     }
     try {
-      const forced = voided || sub?.notificationType === 12 ? "revoked" : null;
+      // SUBSCRIPTION_REVOKED always ends access. A voided purchase does only when it refunds the current order:
+      // a refund of an older renewal leaves the running subscription alone (its state is re-read from Google).
+      const voidsCurrentOrder = voided && voided.orderId && purchase.orderId && voided.orderId === purchase.orderId;
+      const forced = sub?.notificationType === 12 || voidsCurrentOrder ? "revoked" : null;
       await this.refreshPurchase(purchase, `rtdn:${type}`, forced);
       await finish("processed");
       return { status: "processed" };

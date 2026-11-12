@@ -66,16 +66,28 @@ export class JobsService {
       .update(`${m.eventsCount}|${m.retrievedAt?.toISOString() ?? ""}|t${m.taxonomy ?? 0}`)
       .digest("hex");
     const jobId = jobIds.analyseMatch(matchId, ANALYTICS_VERSION, inputVersion);
-    await this.entitlements.consume(userId, "analysis.rerun_per_month", { type: "match", id: matchId });
-    const res = await this.queues.enqueue({
-      queue: QUEUES.tacticalAnalytics,
-      jobType: JOB_TYPES.analyseMatch,
-      jobId,
-      payload: { matchId, reason: "user_request" },
-      matchId,
-      requestedByUserId: userId,
-      priority: PRIORITY.user,
-    });
+    const charge = await this.entitlements.consume(userId, "analysis.rerun_per_month", { type: "match", id: matchId });
+    const refund = () =>
+      charge.charged && charge.entitlement.periodKey
+        ? this.entitlements.refund(userId, "analysis.rerun_per_month", { type: "match", id: matchId }, charge.entitlement.periodKey).catch(() => undefined)
+        : undefined;
+    let res;
+    try {
+      res = await this.queues.enqueue({
+        queue: QUEUES.tacticalAnalytics,
+        jobType: JOB_TYPES.analyseMatch,
+        jobId,
+        payload: { matchId, reason: "user_request" },
+        matchId,
+        requestedByUserId: userId,
+        priority: PRIORITY.user,
+      });
+    } catch (err) {
+      await refund(); // nothing was queued, so nothing is owed
+      throw err;
+    }
+    // The same job already exists and is not failed: no new work was scheduled, so no charge either.
+    if (!res.created && res.status !== "dead" && res.status !== "failed") await refund();
     if (!res.created && (res.status === "dead" || res.status === "failed")) await this.queues.replay(jobId);
     if (res.created) await this.db.update(matches).set({ analysisStatus: "queued" }).where(eq(matches.id, matchId));
     const [row] = await this.db.select().from(ingestionJobs).where(eq(ingestionJobs.jobId, jobId));

@@ -1,0 +1,14 @@
+# Gitleaks configuration: the default rules, plus two narrow allowlist entries for known false positives.
+# Both entries match a specific line shape, not whole files, so a real secret in the same files is still found.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "StatsBomb event fixtures: key_pass_id is a public event UUID, not a credential"
+regexTarget = "line"
+regexes = ['''"key_pass_id"\s*:\s*"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"''']
+
+[[allowlists]]
+description = "Metric definitions: \"key\" is a dotted metric name such as shape.compactness_m2"
+regexTarget = "line"
+regexes = ['''"key"\s*:\s*"[a-z]+\.[a-z0-9_]+"''']

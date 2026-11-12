@@ -25,12 +25,13 @@ export function signSessionToken(sub, opts = {}) {
   return `${input}.${signature.toString("base64url")}`;
 }
 
-export const TEST_WEBHOOK_SECRET = `whsec_${randomBytes(24).toString("base64")}`;
+// Generated fresh on every test run; never a real credential.
+export const TEST_WEBHOOK_SECRET = `whsec_${randomBytes(24).toString("base64")}`; // nosemgrep: ajinabraham.njsscan.generic.hardcoded_secrets.node_secret
 
 /** Svix / Standard Webhooks signature headers for a body. */
 export function signWebhook(body, secret = TEST_WEBHOOK_SECRET, id = `msg_${randomBytes(8).toString("hex")}`) {
   const timestamp = Math.floor(Date.now() / 1000).toString();
-  const key = Buffer.from(secret.replace(/^whsec_/, ""), "base64");
+  const key = Buffer.from(secret.replace(/^whsec_/, ""), "base64"); // nosemgrep: ajinabraham.njsscan.generic.hardcoded_secrets.node_secret
   const sig = createHmac("sha256", key).update(`${id}.${timestamp}.${body}`).digest("base64");
   return { "svix-id": id, "svix-timestamp": timestamp, "svix-signature": `v1,${sig}`, "content-type": "application/json" };
 }

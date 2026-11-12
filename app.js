@@ -7,7 +7,7 @@ import ApiError from "./utils/ApiError.js";
 import { sendError } from "./utils/asyncHandler.js";
 import { uuidv7 } from "./utils/ids.js";
 import { getEnv } from "./configs/env.js";
-import { ipRateLimit } from "./middlewares/rateLimit.middleware.js";
+import { ipBackstop, ipRateLimit, strictLimit } from "./middlewares/rateLimit.middleware.js";
 import healthRoutes from "./routes/health.routes.js";
 import webhookRoutes from "./routes/webhook.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
@@ -37,10 +37,19 @@ export function createApp() {
   app.use((req, res, next) => {
     req.id = uuidv7();
     res.setHeader("x-request-id", req.id);
+    // Responses can depend on who is asking (plan, ads, private data): never let a shared cache reuse them.
+    res.setHeader("Vary", "Authorization");
+    if (req.headers.authorization) res.setHeader("Cache-Control", "private, no-store");
     next();
   });
 
-  app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: "cross-origin" } }));
+  // The API only returns JSON, so the strictest policy applies: nothing may load, nothing may frame it.
+  app.use(
+    helmet({
+      contentSecurityPolicy: { useDefaults: false, directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"] } },
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+    }),
+  );
 
   const origins = env.CORS_ORIGINS.split(",")
     .map((o) => o.trim())
@@ -68,10 +77,17 @@ export function createApp() {
     });
   }
 
+  // Every request, whatever route or headers, counts against the per-IP backstop.
+  app.use(ipBackstop);
+
+  // Readiness touches the database, Redis and storage, so it gets its own small per-IP budget.
+  app.use("/readyz", strictLimit("readyz", 30));
   app.use("/", healthRoutes);
 
   // Webhook routes verify signatures over the raw bytes, so they are mounted before the JSON parser.
-  // They authenticate by signature and are not rate limited per IP (the sender is a provider, not a user).
+  // Senders are providers, so they are limited per IP more loosely than users; this also caps the
+  // security-log rows that rejected (forged) deliveries write.
+  app.use(["/v1/webhooks", "/webhooks"], strictLimit("webhook", 300));
   app.use("/v1/webhooks", webhookRoutes);
   app.use("/webhooks", webhookRoutes);
 

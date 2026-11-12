@@ -19,6 +19,9 @@ import {
 const homeTeam = aliasedTable(teams, "home_team");
 const awayTeam = aliasedTable(teams, "away_team");
 /** Coverage label shown to clients before they expect advanced features (PDF section 3). */
+/** User text is matched literally: % and _ (and the escape character itself) lose their LIKE meaning. */
+export const escapeLike = (s) => String(s).replace(/[\\%_]/g, (c) => `\\${c}`);
+
 export function coverageLevel(c) {
   if (!c) return "fixtures_only";
   if (c.hasTracking) return "tracking";
@@ -45,7 +48,7 @@ export class FootballService {
       })
       .from(competitions)
       .leftJoin(seasons, eq(seasons.competitionId, competitions.id))
-      .where(q ? ilike(competitions.name, `%${q}%`) : undefined)
+      .where(q ? ilike(competitions.name, `%${escapeLike(q)}%`) : undefined)
       .groupBy(competitions.id)
       .orderBy(asc(competitions.name));
     return { data: rows };
@@ -78,13 +81,13 @@ export class FootballService {
   }
   async listTeams(query) {
     const conds = [];
-    if (query.q) conds.push(ilike(teams.name, `%${query.q}%`));
+    if (query.q) conds.push(ilike(teams.name, `%${escapeLike(query.q)}%`));
     if (query.competitionId || query.seasonId) {
       conds.push(sql`exists (select 1 from ${matches} m where (m.home_team_id = ${teams.id} or m.away_team_id = ${teams.id})
         ${query.competitionId ? sql`and m.competition_id = ${query.competitionId}` : sql``}
         ${query.seasonId ? sql`and m.season_id = ${query.seasonId}` : sql``})`);
     }
-    const cursor = decodeCursor(query.cursor);
+    const cursor = decodeCursor(query.cursor, ["string", "uuid"]);
     if (cursor) conds.push(sql`(${teams.name}, ${teams.id}) > (${String(cursor[0])}, ${cursor[1]})`);
     const rows = await this.db
       .select({ id: teams.id, name: teams.name, countryName: teams.countryName, isNationalTeam: teams.isNationalTeam })
@@ -232,7 +235,7 @@ export class FootballService {
   }
   async search(q, types, limit = 8) {
     const out = {};
-    const like = `%${q}%`;
+    const like = `%${escapeLike(q)}%`;
     if (types.includes("competition")) {
       out.competitions = await this.db
         .select({ id: competitions.id, name: competitions.name, countryName: competitions.countryName })
@@ -278,7 +281,7 @@ export class FootballService {
     if (query.analysed !== undefined)
       conds.push(query.analysed ? eq(matches.analysisStatus, "complete") : sql`${matches.analysisStatus} <> 'complete'`);
     if (extra) conds.push(extra);
-    const cursor = decodeCursor(query.cursor);
+    const cursor = decodeCursor(query.cursor, ["date", "uuid"]);
     if (cursor) conds.push(sql`(${matches.kickoffAt}, ${matches.id}) < (${new Date(String(cursor[0]))}, ${cursor[1]})`);
     const rows = await this.db
       .select({
@@ -432,7 +435,7 @@ export class FootballService {
     if (q.type?.length) conds.push(inArray(events.typeKey, q.type));
     if (q.period) conds.push(eq(events.period, q.period));
     if (q.possessionId) conds.push(eq(events.possessionId, q.possessionId));
-    const cursor = decodeCursor(q.cursor);
+    const cursor = decodeCursor(q.cursor, ["int", "uuid"]);
     if (cursor) conds.push(gt(events.sequenceIndex, Number(cursor[0])));
     const rows = await this.db
       .select({
