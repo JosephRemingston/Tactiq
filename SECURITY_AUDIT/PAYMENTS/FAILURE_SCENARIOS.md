@@ -20,7 +20,7 @@ Results are from `tests/payments.test.js` unless another file is named.
 | 6 | Acknowledgement call fails | grant, `acknowledged = false` | Reconciliation retries | Acknowledged later | `security.billing.test.js` (acknowledgement failure) |
 | 7 | Acknowledgement succeeds at Google, response lost | grant, `acknowledged = false` | The next read reports Google's acknowledgement; recorded without calling again | Acknowledged once | "acknowledgement succeeded at the store but the response was lost…" |
 | 8 | Crash after acknowledging, before responding | everything | Retry is a no-op | No change | "crash after acknowledging…" |
-| 9 | Process killed mid-transaction (power loss, SIGKILL) | nothing (Postgres rolls back an uncommitted transaction; the advisory lock is released with the connection) | as #4 | as #4 | Covered by #4 plus Postgres semantics; a real SIGKILL is tested for the job runner in `security.jobs.test.js`, not for the verify route |
+| 9 | Process killed mid-transaction (power loss, SIGKILL) | nothing (Postgres rolls back an uncommitted transaction; the advisory lock is released with the connection) | A verification waiting on the lock in another process proceeds | One grant | "a process killed (SIGKILL) inside the purchase transaction…" |
 
 ## Notifications
 

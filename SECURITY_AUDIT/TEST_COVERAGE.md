@@ -100,3 +100,26 @@ The uncovered branches are mostly defensive fallbacks such as `??` defaults and 
 | Real Google Play API | No Play Console listing yet | Play Console test purchases after the app ships |
 | DAST (OWASP ZAP baseline) | Not run (see REMAINING_RISKS R-11) | `zap-baseline.py` against a staging URL |
 | `cli.js`, `worker.js`, `index.js` entry points | Thin wrappers around tested modules | Smoke tests in CI if they grow |
+
+## Update (12 November 2026, after the payment audit and the gap work)
+
+The suite now has **287 tests: 287 pass, 0 fail, 0 skipped**. Line coverage is 96.8% and branch coverage 87.6% across all files.
+
+Every security-critical module now meets the 90% branch target:
+
+| Module | Branches |
+|---|---|
+| `clerk.js` | 91.9% |
+| `googlePlay.js` | 97.6% |
+| `billing.service.js` | 91.6% |
+| `entitlements.service.js` | 93.0% |
+| `jobs.service.js` | 92.5% |
+| `personal.service.js` | 95.2% |
+| `asyncHandler.js` | 97.7% |
+| `runner.js` | 91.7% |
+
+What was added:
+- **`tests/edges.test.js`:** a refund when queueing a paid re-analysis fails, which fails if the refund is removed; the Pro plan switching ads off; unknown features denied; idempotent saves; cursor pagination of private lists; feeds built from each kind of follow.
+- **Unit tests:** verifier selection, where production never gets the fake; OAuth failure; log scrubbing; job registry; Clerk shape fallbacks.
+- **A Clerk session test** for missing fields.
+- **A real SIGKILL** in the middle of a purchase transaction.

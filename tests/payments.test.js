@@ -2,9 +2,11 @@
 // changes, acknowledgement, crash points, reconciliation, cache consistency and database constraints.
 // The store is the fake verifier (no real purchase, refund or financial operation ever happens); everything
 // else is real: Express, Postgres transactions, advisory locks and unique indexes.
-import { SKIP, startTestApp } from "./support/harness.js";
+import { SKIP, startTestApp, TEST_ENV } from "./support/harness.js";
 import { describe, it, before, after, beforeEach, afterEach, expect } from "./support/expect.js";
 import { randomBytes } from "node:crypto";
+import { spawn } from "node:child_process";
+import { join } from "node:path";
 
 describe("payments", { skip: SKIP ?? false }, () => {
   let t;
@@ -436,6 +438,50 @@ describe("payments", { skip: SKIP ?? false }, () => {
       expect(verifier.acknowledged.has(tk)).toBe(true);
       expect((await purchaseRow(tk)).acknowledged).toBe(true);
       expect((await ledger(tk, u.id)).grant_audit).toBe(1);
+    });
+
+    it("a process killed (SIGKILL) inside the purchase transaction: rolled back, lock released, the waiting retry grants once", async () => {
+      const u = await t.newUser("sigkill");
+      const tk = token();
+      const servicesPath = JSON.stringify(join(import.meta.dirname, "..", "services", "index.js"));
+      const script = `
+        const { services } = await import(${servicesPath});
+        const billing = services().billing;
+        billing.faultInjector = async (point) => {
+          if (point === "beforeCommit") {
+            console.log("IN_TRANSACTION");
+            await new Promise(() => {}); // hold the transaction and its lock until killed
+          }
+        };
+        await billing.verifyPurchase(${JSON.stringify(u.id)}, { productId: "pro_monthly", purchaseToken: ${JSON.stringify(tk)} }, {});
+      `;
+      const child = spawn(process.execPath, ["--input-type=module", "-e", script], { env: { ...process.env, ...TEST_ENV }, stdio: ["ignore", "pipe", "pipe"] });
+      const exited = new Promise((r) => child.once("exit", r));
+      try {
+        await new Promise((resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error("child never reached the transaction")), 20_000);
+          child.stdout.on("data", (d) => {
+            if (String(d).includes("IN_TRANSACTION")) {
+              clearTimeout(timer);
+              resolve();
+            }
+          });
+          child.once("exit", () => reject(new Error("child exited early")));
+        });
+        // The child holds the token's lock with its rows written but not committed.
+        expect(await ledger(tk, u.id)).toMatchObject({ purchases: 0, subscriptions: 0, grants: 0 });
+        let settled = false;
+        const waiting = verifySvc(u, "pro_monthly", tk).finally(() => (settled = true));
+        await pause(300);
+        expect(settled).toBe(false); // serialized across processes by the database lock
+        child.kill("SIGKILL");
+        await exited;
+        await waiting;
+      } finally {
+        child.kill("SIGKILL");
+      }
+      expect(await ledger(tk, u.id)).toMatchObject({ purchases: 1, subscriptions: 1, grants: featureCount, grant_audit: 1 });
+      expect(verifier.acknowledged.has(tk)).toBe(true);
     });
 
     it("crash after acknowledging: the retry is a no-op", async () => {

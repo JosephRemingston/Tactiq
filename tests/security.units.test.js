@@ -13,7 +13,9 @@ import { escapeLike } from "../services/football.service.js";
 import { getEnv, resetEnv } from "../configs/env.js";
 import { restCredentials, setRedisClientForTests, cacheGet, cacheSet, cached, locks } from "../configs/redis.js";
 import { toProfile, verifySessionToken } from "../configs/clerk.js";
-import { fromSubscriptionV2, GooglePlayVerifier, FakePurchaseVerifier, PurchaseNotFoundError } from "../configs/googlePlay.js";
+import { fromSubscriptionV2, GooglePlayVerifier, FakePurchaseVerifier, PurchaseNotFoundError, getPurchaseVerifier, resetPurchaseVerifier } from "../configs/googlePlay.js";
+import { JobRegistry, JobRunner, describeError } from "../workers/runner.js";
+import { JobsService } from "../services/jobs.service.js";
 import { isEntitled, accessUntil, assertStoreResponse, StoreResponseError, GRACE_BACKSTOP_MS, obfuscatedAccountId, BillingService } from "../services/billing.service.js";
 import { memoryHit, resetMemoryLimits, clientIp } from "../middlewares/rateLimit.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
@@ -579,5 +581,200 @@ describe("ads", () => {
     const cfg = await new AdsService(ent(false), { NODE_ENV: "development" }).getConfig("u");
     expect(cfg).toMatchObject({ enabled: false, reason: "plan", placements: [] });
     expect(cfg.adFreeScreens).toContain("payment");
+  });
+});
+
+describe("purchase verifier selection", () => {
+  const KEYS = ["NODE_ENV", "NETLIFY", "BILLING_FAKE_VERIFIER", "GOOGLE_PLAY_PACKAGE_NAME", "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"];
+  const set = (vars) => {
+    for (const [k, v] of Object.entries(vars)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+    resetEnv();
+    resetPurchaseVerifier();
+  };
+
+  it("uses the fake only outside production, the real one when configured, and nothing otherwise", () => {
+    const saved = Object.fromEntries(KEYS.map((k) => [k, process.env[k]]));
+    const keys = generateKeyPairSync("rsa", { modulusLength: 2048 });
+    const serviceAccount = JSON.stringify({ client_email: "sa@test.iam.gserviceaccount.com", private_key: keys.privateKey.export({ type: "pkcs8", format: "pem" }) });
+    try {
+      set({ BILLING_FAKE_VERIFIER: "true" });
+      const fake = getPurchaseVerifier();
+      expect(fake).toBeInstanceOf(FakePurchaseVerifier);
+      expect(getPurchaseVerifier()).toBe(fake); // one instance per process
+
+      // Production with the fake switched on by mistake: never the fake. NETLIFY marks a hosted runtime, so no
+      // .env file is read by this test.
+      set({ NODE_ENV: "production", NETLIFY: "true", BILLING_FAKE_VERIFIER: "true" });
+      expect(getPurchaseVerifier()).toBe(null);
+      set({ GOOGLE_PLAY_PACKAGE_NAME: "app.touchline", GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: serviceAccount });
+      expect(getPurchaseVerifier()).toBeInstanceOf(GooglePlayVerifier);
+
+      set({ NODE_ENV: "test", NETLIFY: undefined, BILLING_FAKE_VERIFIER: "false", GOOGLE_PLAY_PACKAGE_NAME: "app.touchline", GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: "" });
+      expect(getPurchaseVerifier()).toBe(null); // a package name alone is not enough
+    } finally {
+      set(saved);
+    }
+  });
+});
+
+describe("Google Play client edge cases", () => {
+  it("a refused OAuth token request fails the call without leaking anything, and a token without expires_in is cached for an hour", async () => {
+    const keys = generateKeyPairSync("rsa", { modulusLength: 2048 });
+    const serviceAccount = { client_email: "sa@test.iam.gserviceaccount.com", private_key: keys.privateKey.export({ type: "pkcs8", format: "pem" }) };
+    const refused = new GooglePlayVerifier({ packageName: "app.touchline", serviceAccount, fetchImpl: async () => new Response("denied", { status: 401 }) });
+    let err;
+    try {
+      await refused.getSubscription("secret-purchase-token");
+    } catch (e) {
+      err = e;
+    }
+    expect(err.message).toBe("Google OAuth token request failed: 401");
+
+    let tokenCalls = 0;
+    const v = new GooglePlayVerifier({
+      packageName: "app.touchline",
+      serviceAccount,
+      fetchImpl: async (url) => {
+        if (url.startsWith("https://oauth2")) {
+          tokenCalls += 1;
+          return new Response(JSON.stringify({ access_token: "tok" }));
+        }
+        return new Response(JSON.stringify({ subscriptionState: "SUBSCRIPTION_STATE_EXPIRED" }));
+      },
+    });
+    await v.getSubscription("a");
+    await v.getSubscription("b");
+    expect(tokenCalls).toBe(1);
+    expect(v.tokenExpiresAt - Date.now() > 3500_000).toBe(true);
+  });
+
+  it("an answer without line items or dates maps to nulls, which billing then refuses for any entitled state", () => {
+    const v = fromSubscriptionV2({ subscriptionState: "SUBSCRIPTION_STATE_ACTIVE" });
+    expect(v).toMatchObject({ productId: null, state: "active", startedAt: null, expiresAt: null });
+    expect(() => assertStoreResponse(v)).toThrow(StoreResponseError);
+  });
+
+  it("the fake store keeps dates fixed between reads and fails acknowledgements during an outage", async () => {
+    const f = new FakePurchaseVerifier();
+    const a = await f.getSubscription("fake:pro_monthly:active");
+    await new Promise((r) => setTimeout(r, 5));
+    expect((await f.getSubscription("fake:pro_monthly:active")).expiresAt.getTime()).toBe(a.expiresAt.getTime());
+    expect(Math.round((a.expiresAt - Date.now()) / 86_400_000)).toBe(30); // default term
+    f.setState("fake:pro_monthly:active", "cancelled");
+    expect(Math.round(((await f.getSubscription("fake:pro_monthly:active")).expiresAt - Date.now()) / 86_400_000)).toBe(30);
+    f.failWith(new Error("ECONNRESET"));
+    await expect(f.acknowledge("pro_monthly", "fake:pro_monthly:active")).rejects.toThrow(/ECONNRESET/);
+    expect(f.acknowledged.size).toBe(0);
+  });
+});
+
+describe("error logging edge cases", () => {
+  const capture = (fn) => {
+    const lines = [];
+    const orig = console.error;
+    console.error = (...a) => lines.push(a.join(" "));
+    try {
+      fn();
+    } finally {
+      console.error = orig;
+    }
+    return lines.join("\n");
+  };
+
+  it("describes non-Error values, wrapped database errors and failed queries without their data", () => {
+    expect(describeForLog("plain failure")).toEqual({ error: "Error", message: "plain failure", stack: [] });
+    expect(describeForLog(undefined).message).toBe("unknown error");
+    const cause = Object.assign(new Error('duplicate key value violates "users_email_uq"'), { code: "23505" });
+    const wrapped = new Error("Failed query: insert into users values ($1)\nparams: secret@example.com", { cause });
+    const d = describeForLog(wrapped);
+    expect(d).toMatchObject({ code: "23505", message: 'duplicate key value violates "…"' });
+    expect(JSON.stringify(d)).not.toContain("secret@example.com");
+    expect(describeForLog(new Error("Failed query: select $1")).message).toBe("query failed");
+  });
+
+  it("logs the route pattern or the path without its query string, and never writes twice", () => {
+    const withQuery = capture(() => sendError(new Error("boom"), { method: "GET", originalUrl: "/v1/x?token=secret-value" }, fakeRes()));
+    expect(withQuery).toContain('"route":"/v1/x"');
+    expect(withQuery).not.toContain("secret-value");
+    const routed = capture(() => sendError(new Error("boom"), { method: "GET", baseUrl: "/v1/me", route: { path: "/notes/:id" }, originalUrl: "/v1/me/notes/abc" }, fakeRes()));
+    expect(routed).toContain('"route":"/v1/me/notes/:id"');
+    expect(capture(() => sendError(new Error("boom"), { method: "GET" }, fakeRes()))).toContain('"route":""');
+
+    const sent = fakeRes();
+    sent.headersSent = true;
+    expect(capture(() => sendError(new Error("late"), { method: "GET" }, sent))).toBe("");
+    expect(sent.body).toBe(null);
+
+    const res = fakeRes();
+    sendError(ApiError.notFound("Note"), { method: "GET", id: "req-1" }, res);
+    expect(res.statusCode).toBe(404);
+    expect(res.body.data).toEqual({ code: "NOT_FOUND", requestId: "req-1" });
+  });
+
+  it("job errors keep the database cause and are capped", () => {
+    const cause = new TypeError("bad input");
+    expect(describeError(new Error("Failed query: …", { cause }))).toBe("TypeError: bad input");
+    expect(describeError(new Error("x".repeat(5000)))).toHaveLength(1000);
+  });
+});
+
+describe("job registry and status", () => {
+  it("refuses two handlers for one job type, and a runner with no handlers claims nothing", async () => {
+    const r = new JobRegistry();
+    r.register({ jobType: "a" });
+    expect(() => r.register({ jobType: "a" })).toThrow(/duplicate handler/);
+    expect(await new JobRunner(null, new JobRegistry(), {}).claim()).toBe(null); // never touches the database
+  });
+
+  it("failed and dead jobs show a generic message, never the internal error", () => {
+    const jobs = new JobsService(null, null, null);
+    for (const status of ["failed", "dead"]) {
+      expect(jobs.shape({ status, lastError: "ECONNREFUSED 10.0.0.5:5432" }).error).toBe("The job failed. It will be retried automatically or reviewed by the team.");
+    }
+    expect(jobs.shape({ status: "completed" }).error).toBe(null);
+  });
+});
+
+describe("Clerk mapping edge cases", () => {
+  it("maps SDK-shaped users: unverified addresses dropped, unstated status trusted, username and avatar fallbacks", () => {
+    const p = toProfile({
+      id: "user_sdk",
+      username: "ada_fan",
+      imageUrl: "https://img.example/a.png",
+      primaryEmailAddressId: "missing",
+      emailAddresses: [
+        { id: "e1", emailAddress: "bad@example.com", verification: { status: "unverified" } },
+        { id: "e2", emailAddress: "trusted@example.com" },
+      ],
+      externalAccounts: [
+        { provider: "oauth_apple", externalId: "apple-1", emailAddress: null },
+        { provider: "oauth_google" }, // no subject: not an identity
+      ],
+    });
+    expect(p).toEqual({
+      clerkUserId: "user_sdk",
+      email: "trusted@example.com",
+      displayName: "ada_fan",
+      avatarUrl: "https://img.example/a.png",
+      identities: [{ provider: "apple", subject: "apple-1", email: null }],
+    });
+    expect(toProfile({ id: "bare" })).toEqual({ clerkUserId: "bare", email: null, displayName: null, avatarUrl: null, identities: [] });
+  });
+
+  it("without configured authorized parties any azp is accepted (Android has no web origin); a non-string sid is dropped", async () => {
+    resetEnv();
+    const saved = { key: process.env.CLERK_JWT_KEY, parties: process.env.CLERK_AUTHORIZED_PARTIES };
+    process.env.CLERK_JWT_KEY = TEST_JWT_PUBLIC_KEY;
+    process.env.CLERK_AUTHORIZED_PARTIES = "";
+    try {
+      expect(await verifySessionToken(signSessionToken("u1", { azp: "https://anything.example", sid: 42 }))).toEqual({ clerkUserId: "u1", sessionId: null });
+    } finally {
+      process.env.CLERK_JWT_KEY = saved.key;
+      process.env.CLERK_AUTHORIZED_PARTIES = saved.parties;
+      resetEnv();
+    }
   });
 });

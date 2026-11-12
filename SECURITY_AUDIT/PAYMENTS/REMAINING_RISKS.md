@@ -38,4 +38,3 @@ All Google behaviour here was modelled with the fake verifier and mocked HTTP. N
 
 - No real purchase, refund, acknowledgement or Google API call. All of them were simulated.
 - No test against production or staging infrastructure.
-- No real SIGKILL during the verify route (see TEST_COVERAGE gaps).

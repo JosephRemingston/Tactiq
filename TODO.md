@@ -53,9 +53,9 @@ Open items from the security audit (`SECURITY_AUDIT/REMAINING_RISKS.md`, R-*) an
 
 ## Test gaps (nice to have)
 
-- [ ] Raise branch coverage to 90% on `entitlements.service`, `personal.service`, `jobs.service`, `asyncHandler`, `runner`, `clerk.js` (R-12).
-- [ ] Test the real verifier's selection from environment variables (`configs/googlePlay.js` lines 207–218).
-- [ ] A test that SIGKILLs a process in the middle of a purchase transaction.
+- [x] Raise branch coverage to 90% on `entitlements.service`, `personal.service`, `jobs.service`, `asyncHandler`, `runner`, `clerk.js` (R-12). All now 91.7–97.7%.
+- [x] Test the real verifier's selection from environment variables, including that production never uses the fake.
+- [x] A test that SIGKILLs a process in the middle of a purchase transaction.
 - [ ] Optional: tests against a dedicated Upstash database.
 
 ## Accepted (no action unless the situation changes)

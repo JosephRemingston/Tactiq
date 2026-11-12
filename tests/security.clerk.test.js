@@ -16,6 +16,10 @@ describe("Clerk session management", () => {
       const u = new URL(url);
       calls.push(`${init.method ?? "GET"} ${u.pathname}`);
       if (u.hostname !== "api.clerk.com") throw new Error(`unexpected host ${u.hostname}`);
+      if (u.pathname === "/v1/sessions" && u.searchParams.get("user_id") === "user_sparse") {
+        const { last_active_at: _a, expire_at: _e, client_id: _c, ...sparse } = session("sess_sparse", "user_sparse");
+        return json({ data: [sparse], total_count: 1 });
+      }
       if (u.pathname === "/v1/sessions") return json({ data: [session(`sess_of_${u.searchParams.get("user_id")}`, u.searchParams.get("user_id"))], total_count: 1 });
       if (u.pathname.endsWith("/revoke")) return json(session(u.pathname.split("/")[3], "x"));
       if (u.pathname.startsWith("/v1/users/") && (init.method ?? "GET") === "DELETE") return deleteStatus === 200 ? json({ deleted: true }) : json({ errors: [{ code: "resource_not_found" }] }, deleteStatus);
@@ -46,6 +50,10 @@ describe("Clerk session management", () => {
   it("lists only the caller's sessions, with timestamps normalised", async () => {
     const list = await clerk.listSessions("user_a");
     expect(list).toEqual([{ id: "sess_of_user_a", status: "active", lastActiveAt: "2023-11-14T22:13:20.000Z", expireAt: "2027-01-15T08:00:00.000Z", clientId: "client_1" }]);
+  });
+
+  it("sessions with missing timestamps or client come back as nulls, not errors or invalid dates", async () => {
+    expect(await clerk.listSessions("user_sparse")).toEqual([{ id: "sess_sparse", status: "active", lastActiveAt: null, expireAt: null, clientId: null }]);
   });
 
   it("revokes the caller's own session", async () => {

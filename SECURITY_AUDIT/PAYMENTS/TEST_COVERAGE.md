@@ -49,7 +49,7 @@ With the advisory lock removed, every **duplicate** test still passed: the uniqu
 | Duplicate notifications | 20× the same id; 20 ids with the same state; the parallel duplicates in `security.billing.test.js` |
 | Plan changes | pending upgrade; granted upgrade; late renewal of the replaced token; a replacement naming another user's token |
 | Acknowledgement | lost response; failure and retry (`security.billing.test.js`) |
-| Crash points | before commit, after commit (client retries / reconciliation), after acknowledge, notification mid-transaction |
+| Crash points | before commit, after commit (client retries / reconciliation), after acknowledge, notification mid-transaction, and a real SIGKILL of a process holding the purchase transaction (rolled back, lock released, the waiting retry grants once) |
 | Reconciliation | parallel runs with a notification; a missed renewal; renewals racing a run |
 | Cache consistency | Redis delete failing after a refund: the plan is Free at once, cached grants for at most 60 s |
 | Database integrity | duplicate subscription → 23505; duplicate grant → 23505; invalid statuses on 4 tables → 23514 |
@@ -69,7 +69,5 @@ With the advisory lock removed, every **duplicate** test still passed: the uniqu
 | Gap | Why | What would close it |
 |---|---|---|
 | The real Google Play API | No Play Console listing yet; tests must not create real purchases | Licence-tester (sandbox) purchases through every state before launch (REMAINING_RISKS PR-1 to PR-5) |
-| A real process kill during verify | Crash points use thrown exceptions; Postgres rollback on disconnect is standard but not exercised here | A test that SIGKILLs a child process holding the transaction |
 | Neon pooler behaviour with advisory locks | Tests use local Postgres | One staging run of the parallel tests against a Neon branch |
 | Real Upstash | Fakes only | Optional test against a dedicated Upstash database |
-| `googlePlay.js` lines 207–218 | Selecting the real verifier from environment variables | A unit test with env overrides |
