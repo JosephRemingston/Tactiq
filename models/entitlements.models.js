@@ -1,4 +1,5 @@
-import { index, integer, jsonb, pgTable, primaryKey, text, unique, uuid } from "drizzle-orm/pg-core";
+import { check, index, integer, jsonb, pgTable, primaryKey, text, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { pk, timestamps, tz } from "./_common.js";
 import { users } from "./users.models.js";
 export const USAGE_PERIODS = ["none", "month"];
@@ -28,7 +29,12 @@ export const subscriptions = pgTable(
     cancelledAt: tz(),
     ...timestamps,
   },
-  (t) => [index("subscriptions_user_status_idx").on(t.userId, t.status)],
+  (t) => [
+    index("subscriptions_user_status_idx").on(t.userId, t.status),
+    // One subscription per store purchase token, enforced by the database, not only by application checks.
+    uniqueIndex("subscriptions_provider_uq").on(t.source, t.providerSubscriptionId).where(sql`provider_subscription_id is not null`),
+    check("subscriptions_status_ck", sql`status in ('pending','active','grace','on_hold','paused','cancelled','expired','revoked')`),
+  ],
 );
 /** Append-only grants. Revocation flips status; history stays auditable (PDF §5). */
 export const entitlements = pgTable(
@@ -51,7 +57,12 @@ export const entitlements = pgTable(
     revokedAt: tz(),
     ...timestamps,
   },
-  (t) => [index("entitlements_user_feature_idx").on(t.userId, t.featureKey, t.status)],
+  (t) => [
+    index("entitlements_user_feature_idx").on(t.userId, t.featureKey, t.status),
+    // A subscription grants each feature exactly once; retries and concurrent workers cannot duplicate a grant.
+    uniqueIndex("entitlements_subscription_feature_uq").on(t.sourceSubscriptionId, t.featureKey).where(sql`source_subscription_id is not null`),
+    check("entitlements_status_ck", sql`status in ('active','revoked','expired')`),
+  ],
 );
 export const entitlementUsage = pgTable(
   "entitlement_usage",

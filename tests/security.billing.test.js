@@ -124,7 +124,7 @@ describe("billing", { skip: SKIP ?? false }, () => {
     expect(verifier.acknowledged.has(pending)).toBe(false);
   });
 
-  it("every store state maps to the right access, and restore is idempotent", async () => {
+  it("every store state maps to the right access, revoked is final, and restore is idempotent", async () => {
     const u = await t.newUser("states");
     const tk = token("pro_monthly");
     await verify(u, "pro_monthly", tk);
@@ -148,12 +148,14 @@ describe("billing", { skip: SKIP ?? false }, () => {
     ]) {
       expect(await after(state, days)).toBe(expected);
     }
-    expect(await after("active")).toBe("pro_monthly");
-    expect(await after("active")).toBe("pro_monthly");
+    // A refunded token never grants again, whatever the store later says about it (Google issues a new token
+    // for a new purchase); repeated restores change nothing.
+    expect(await after("active")).toBe("free");
+    expect(await after("active")).toBe("free");
     expect((await counts(tk)).subscriptions).toBe(1);
     const viaRoute = await t.call("POST", "/v1/billing/restore", { token: u.token });
     expect(viaRoute.status).toBe(200);
-    expect(viaRoute.body.data.plan.key).toBe("pro_monthly");
+    expect(viaRoute.body.data.plan.key).toBe("free");
   });
 
   it("a Pro grant past its paid-through date stops working immediately, before any job runs", async () => {

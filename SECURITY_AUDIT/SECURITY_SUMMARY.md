@@ -101,3 +101,10 @@ Neither workflow uses production secrets.
 - `REMEDIATION_LOG.md`: every change and its reason
 - `TEST_COVERAGE.md`: numbers, per-suite coverage and gaps
 - `REMAINING_RISKS.md`: open items with the exact action each one needs
+
+## Payment audit (follow-up, same day)
+
+A separate audit of the payment system is in `PAYMENTS/`. It covered idempotency, concurrency, state machine, refunds, plan changes, acknowledgement, crash points, reconciliation and database integrity.
+- **Found:** 3 High, 5 Medium, 3 Low and 3 Informational. The Highs were: a delayed store answer restoring Pro after a refund, a refunded token becoming active again, and a missing expiry granting Pro forever.
+- **Fixed:** all High and Medium findings, with 32 new payment tests; the suite now has 263 tests.
+- **Still open:** migration `0003_payment_integrity.sql` must be applied to Neon. Google Play behaviour remains unverified until sandbox purchases (see `PAYMENTS/REMAINING_RISKS.md`).

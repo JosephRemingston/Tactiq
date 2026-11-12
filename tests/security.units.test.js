@@ -14,7 +14,7 @@ import { getEnv, resetEnv } from "../configs/env.js";
 import { restCredentials, setRedisClientForTests, cacheGet, cacheSet, cached, locks } from "../configs/redis.js";
 import { toProfile, verifySessionToken } from "../configs/clerk.js";
 import { fromSubscriptionV2, GooglePlayVerifier, FakePurchaseVerifier, PurchaseNotFoundError } from "../configs/googlePlay.js";
-import { isEntitled, obfuscatedAccountId, BillingService } from "../services/billing.service.js";
+import { isEntitled, accessUntil, assertStoreResponse, StoreResponseError, GRACE_BACKSTOP_MS, obfuscatedAccountId, BillingService } from "../services/billing.service.js";
 import { memoryHit, resetMemoryLimits, clientIp } from "../middlewares/rateLimit.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import { periodKeyFor } from "../services/entitlements.service.js";
@@ -359,14 +359,53 @@ describe("Google Play verification", () => {
     expect(v).toMatchObject({ productId: "pro_monthly", orderId: "GPA.1", acknowledged: true, linkedPurchaseToken: "old", obfuscatedAccountId: "acct", autoRenewing: true });
   });
 
-  it("access follows state and the paid-through date (property-based)", () => {
+  it("access follows state and the paid-through date; a missing expiry never means forever (property-based)", () => {
     const r = rng();
     const now = new Date("2026-06-15T12:00:00Z");
     for (let i = 0; i < 1000; i++) {
       const state = r.pick(["pending", "active", "grace", "on_hold", "paused", "cancelled", "expired", "revoked", "weird"]);
-      const expires = r.next() < 0.1 ? null : new Date(now.getTime() + r.int(-30, 30) * 86_400_000 + r.int(-1000, 1000));
-      const expected = ["active", "grace", "cancelled"].includes(state) && (!expires || expires > now);
-      expect(isEntitled(state, expires, now)).toBe(expected);
+      const roll = r.next();
+      const expires =
+        roll < 0.1 ? null : roll < 0.15 ? new Date("not a date") : new Date(now.getTime() + r.int(-30, 30) * 86_400_000 + r.int(-1000, 1000));
+      const until = accessUntil(state, expires, now);
+      if (state === "grace") {
+        // Google keeps grace-period users entitled while it retries payment: access never ends before the backstop.
+        expect(until.getTime() >= now.getTime() + GRACE_BACKSTOP_MS).toBe(true);
+        expect(until.getTime() >= (expires instanceof Date && Number.isFinite(expires.getTime()) ? expires.getTime() : 0)).toBe(true);
+      } else {
+        const ok = ["active", "cancelled"].includes(state) && expires instanceof Date && Number.isFinite(expires.getTime()) && expires > now;
+        expect(until === null ? null : until.getTime()).toBe(ok ? expires.getTime() : null);
+      }
+      expect(isEntitled(state, expires, now)).toBe(until !== null);
+    }
+  });
+
+  it("the grace backstop is stable within a UTC day, so replays do not rewrite grants", () => {
+    const a = accessUntil("grace", null, new Date("2026-06-15T00:00:01Z"));
+    const b = accessUntil("grace", null, new Date("2026-06-15T23:59:59Z"));
+    expect(a.getTime()).toBe(b.getTime());
+    expect(accessUntil("grace", null, new Date("2026-06-16T00:00:01Z")).getTime() > a.getTime()).toBe(true);
+  });
+
+  it("store answers without a product, with an unknown state, or without a usable expiry are rejected", () => {
+    const future = new Date(Date.now() + 86_400_000);
+    for (const bad of [
+      null,
+      { state: "active", expiresAt: future },
+      { productId: "pro_monthly", state: "weird", expiresAt: future },
+      { productId: "pro_monthly", state: "active", expiresAt: null },
+      { productId: "pro_monthly", state: "cancelled", expiresAt: "garbage" },
+      { productId: "pro_monthly", state: "grace" },
+    ]) {
+      expect(() => assertStoreResponse(bad)).toThrow(StoreResponseError);
+    }
+    for (const ok of [
+      { productId: "pro_monthly", state: "active", expiresAt: future },
+      { productId: "pro_monthly", state: "pending", expiresAt: null },
+      { productId: "pro_monthly", state: "revoked", expiresAt: null },
+      { productId: "pro_monthly", state: "expired" },
+    ]) {
+      assertStoreResponse(ok);
     }
   });
 

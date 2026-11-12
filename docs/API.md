@@ -666,7 +666,9 @@ Product ids: `pro_monthly`, `pro_annual` (subscriptions).
     "autoRenewing": true, "expiresAt": "2026-12-12T08:39:26.090Z", "lastVerifiedAt": "…" },
   "plan": { "key": "pro_monthly", "source": "google_play", "currentPeriodEnd": "2026-12-12T08:39:26.090Z" } }
 ```
-Errors: 400 (unknown product, token unknown to Google, product mismatch), 403 `PURCHASE_ACCOUNT_MISMATCH`, 409 (token linked to another account), 503 `BILLING_NOT_CONFIGURED`. Rate limited to 20/min.
+Errors: 400 (unknown product, token unknown to Google, product mismatch), 403 `PURCHASE_ACCOUNT_MISMATCH`, 409 (token linked to another account), 503 `BILLING_NOT_CONFIGURED`, 503 (Google unreachable or returned an incomplete answer). Rate limited to 20/min.
+
+**Retrying is always safe.** Verifying the same token again (after a timeout, a crash, an app restart) never grants twice or charges anything: the server answers with the current state. On a timeout or 5xx, retry with backoff; keep the token until a 200 arrives. If the app never retries, the server's daily reconciliation still records and acknowledges the purchase.
 
 **Restore** (new device, reinstall, "Restore purchases" button): `POST /v1/billing/restore` (no body) → `{ "purchases": [Purchase], "plan": {…} }`. Also call it on app start if the Play client reports an owned subscription the server doesn't know about, by verifying that token.
 
@@ -678,7 +680,7 @@ Errors: 400 (unknown product, token unknown to Google, product mismatch), 403 `P
 ```
 Open `manageUrl` for "Manage / cancel subscription".
 
-**`purchase.state`:** `pending`, `active`, `grace` (payment issue, still Pro), `on_hold` (payment failed, no Pro), `paused`, `cancelled` (Pro until `expiresAt`), `expired`, `revoked` (refunded). Use `entitled` for access, `state` for messaging (e.g. "Fix your payment method" for `grace`/`on_hold`).
+**`purchase.state`:** `pending`, `active`, `grace` (payment issue, still Pro while Google retries, even if `expiresAt` has passed), `on_hold` (payment failed, no Pro), `paused`, `cancelled` (Pro until `expiresAt`), `expired` (also used for a token replaced by an upgrade or downgrade), `revoked` (refunded; final: that token never grants again, a new purchase has a new token). Use `entitled` for access, `state` for messaging (e.g. "Fix your payment method" for `grace`/`on_hold`).
 
 ---
 

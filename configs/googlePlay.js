@@ -117,6 +117,7 @@ export class FakePurchaseVerifier {
   constructor() {
     this.acknowledged = new Set();
     this.overrides = new Map();
+    this.firstSeen = new Map();
     this.failure = null;
     this.calls = 0;
   }
@@ -126,7 +127,9 @@ export class FakePurchaseVerifier {
    * `extra` can set e.g. { linkedPurchaseToken, orderId }.
    */
   setState(token, state, daysUntilExpiry, extra = {}) {
-    this.overrides.set(token, { state, daysUntilExpiry, extra });
+    // Like Google, the dates are fixed facts of the purchase: they are set when the state changes, not on every read.
+    const expiresAt = new Date(Date.now() + Number(daysUntilExpiry ?? 30) * 86_400_000);
+    this.overrides.set(token, { state, expiresAt, extra });
   }
 
   /** Test hook: every store call throws `err` until cleared with failWith(null) (simulates a Google outage). */
@@ -139,19 +142,39 @@ export class FakePurchaseVerifier {
     return `GPA.fake-${createHash("sha256").update(String(token)).digest("hex").slice(0, 12)}`;
   }
 
+  /**
+   * Test hook: the next lookup reads the store state immediately but delivers its answer only when the returned
+   * function is called. Simulates a slow network response that arrives after newer information was applied.
+   */
+  holdNext() {
+    let release;
+    const gate = new Promise((r) => (release = r));
+    this.held = gate;
+    return () => release();
+  }
+
   async getSubscription(purchaseToken) {
+    const gate = this.held;
+    this.held = null;
+    const answer = await this.read(purchaseToken);
+    if (gate) await gate;
+    return answer;
+  }
+
+  async read(purchaseToken) {
     this.calls += 1;
     if (this.failure) throw this.failure;
     const [prefix, productId, state, days, account] = String(purchaseToken).split(":");
     if (prefix !== "fake" || !productId || !state) throw new PurchaseNotFoundError();
     const o = this.overrides.get(purchaseToken);
     const effState = o?.state ?? state;
-    const effDays = Number(o?.daysUntilExpiry ?? days ?? 30);
+    if (!this.firstSeen.has(purchaseToken)) this.firstSeen.set(purchaseToken, Date.now());
+    const seen = this.firstSeen.get(purchaseToken);
     return {
       productId,
       state: effState,
-      startedAt: new Date(Date.now() - 86_400_000),
-      expiresAt: new Date(Date.now() + effDays * 86_400_000),
+      startedAt: new Date(seen - 86_400_000),
+      expiresAt: o ? o.expiresAt : new Date(seen + Number(days ?? 30) * 86_400_000),
       orderId: FakePurchaseVerifier.orderIdFor(purchaseToken),
       autoRenewing: effState === "active",
       acknowledged: this.acknowledged.has(purchaseToken),

@@ -19,6 +19,9 @@ class PurchaseOwnershipError extends Error {
 /** States in which the user keeps Pro access (cancelled: until the paid-through date). */
 const ENTITLED_STATES = new Set(["active", "grace", "cancelled"]);
 
+/** Terminal states: a refunded (revoked) purchase token never grants access again; Google issues a new token instead. */
+const TERMINAL_STATES = new Set(["revoked"]);
+
 /** Google Play RTDN subscription notification types (PDF section 8). */
 const RTDN_TYPES = {
   1: "SUBSCRIPTION_RECOVERED",
@@ -43,8 +46,55 @@ function safeEqual(a, b) {
   return x.length === y.length && timingSafeEqual(x, y);
 }
 
+/**
+ * How long a grace-period subscription keeps access beyond its reported expiry before the next store read must
+ * confirm it again. Google keeps the user entitled during grace while it retries payment; reconciliation (daily) and
+ * notifications refresh the state, so this is a rolling backstop rather than a fixed period.
+ */
+export const GRACE_BACKSTOP_MS = 3 * 86_400_000;
+
+const validDate = (d) => d instanceof Date && Number.isFinite(d.getTime());
+
+/**
+ * Until when a store state grants Pro, or null for no access.
+ *   active, cancelled: until the paid-through date, which must be a real future date
+ *   grace:             still entitled (Google is retrying payment): the later of expiry and now + backstop
+ *   anything else:     no access
+ */
+export function accessUntil(state, expiresAt, now = new Date()) {
+  const expiry = expiresAt == null ? null : new Date(expiresAt);
+  if (state === "grace") {
+    // Anchored to the next UTC midnight so repeated reads on the same day give the same answer (no rewrites).
+    const day = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
+    const backstop = new Date(day + GRACE_BACKSTOP_MS);
+    return validDate(expiry) && expiry > backstop ? expiry : backstop;
+  }
+  if (!ENTITLED_STATES.has(state) || !validDate(expiry) || expiry <= now) return null;
+  return expiry;
+}
+
 export function isEntitled(state, expiresAt, now = new Date()) {
-  return ENTITLED_STATES.has(state) && (!expiresAt || new Date(expiresAt) > now);
+  return accessUntil(state, expiresAt, now) !== null;
+}
+
+/** A store answer that cannot be applied safely (e.g. an active subscription with no expiry). Never grants access. */
+export class StoreResponseError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "StoreResponseError";
+  }
+}
+
+const KNOWN_STATES = new Set(["pending", "active", "grace", "on_hold", "paused", "cancelled", "expired", "revoked"]);
+
+/** Rejects store answers that would otherwise be applied with missing or impossible data. */
+export function assertStoreResponse(v) {
+  if (!v || typeof v.productId !== "string" || !v.productId) throw new StoreResponseError("store response has no product");
+  if (!KNOWN_STATES.has(v.state)) throw new StoreResponseError("store response has an unknown state");
+  const needsExpiry = ["active", "grace", "cancelled", "on_hold", "paused"].includes(v.state);
+  if (needsExpiry && !validDate(v.expiresAt == null ? null : new Date(v.expiresAt))) {
+    throw new StoreResponseError("store response has no valid expiry");
+  }
 }
 
 /**
@@ -139,13 +189,20 @@ export class BillingService {
     }
 
     let verified;
+    const fetchedAt = new Date(); // taken before asking the store: newer reads always win, whatever order replies arrive in
     try {
-      verified = await this.verifier.getSubscription(purchaseToken);
+      verified = { ...(await this.verifier.getSubscription(purchaseToken)), fetchedAt };
     } catch (err) {
       if (err instanceof PurchaseNotFoundError) throw ApiError.badRequest("The store does not recognise this purchase");
       throw ApiError.unavailable("Could not reach the store to verify the purchase");
     }
     if (verified.productId !== productId) throw ApiError.badRequest("The purchase is for a different product");
+    try {
+      assertStoreResponse(verified);
+    } catch {
+      // Never grant on an incomplete answer; the app can retry and reconciliation will re-read it.
+      throw ApiError.unavailable("The store returned an incomplete answer; try again shortly");
+    }
     if (verified.obfuscatedAccountId && verified.obfuscatedAccountId !== obfuscatedAccountId(userId)) {
       await this.security.record("purchase_account_mismatch", { userId, ip: meta.ip, metadata: { productId } });
       throw ApiError.forbidden("This purchase was made for a different account", "PURCHASE_ACCOUNT_MISMATCH");
@@ -159,7 +216,9 @@ export class BillingService {
       await this.security.record("purchase_token_reuse", { userId, ip: meta.ip, metadata: { productId, concurrent: true } });
       throw ApiError.conflict("This purchase is linked to another account");
     }
+    await this.fault("afterCommit");
     await this.acknowledgeIfNeeded(purchase, verified);
+    await this.fault("afterAcknowledge");
     await this.security.record("purchase_verified", { userId, ip: meta.ip, metadata: { productId, state: purchase.state } });
     const [fresh] = await this.db.select().from(purchases).where(eq(purchases.id, purchase.id));
     return { purchase: this.purchaseView(fresh), plan: await this.entitlements.currentPlan(userId) };
@@ -181,10 +240,14 @@ export class BillingService {
     return { purchases: results.filter(Boolean).map((p) => this.purchaseView(p)), plan: await this.entitlements.currentPlan(userId) };
   }
 
+  /** Test hook: called at named points of the purchase flow so tests can simulate a crash there. */
+  async fault(point) {
+    if (this.faultInjector) await this.faultInjector(point);
+  }
+
   /** Re-reads one stored purchase from the store and applies it. Returns the updated row (or null if gone). */
   async refreshPurchase(row, reason, forcedState = null) {
-    const product = PRODUCTS.get(row.productId);
-    if (!product) return null;
+    const fetchedAt = new Date();
     let verified;
     try {
       verified = await this.verifier.getSubscription(row.purchaseToken);
@@ -192,7 +255,11 @@ export class BillingService {
       if (!(err instanceof PurchaseNotFoundError)) throw err;
       verified = { ...this.fromRow(row), state: "expired" };
     }
+    verified = { ...verified, fetchedAt };
     if (forcedState) verified = { ...verified, state: forcedState };
+    const product = PRODUCTS.get(verified.productId) ?? PRODUCTS.get(row.productId);
+    if (!product) return null;
+    if (!forcedState) assertStoreResponse(verified);
     const updated = await this.applyState(row.userId, row.purchaseToken, product, verified, reason);
     await this.acknowledgeIfNeeded(updated, verified);
     return updated;
@@ -212,26 +279,69 @@ export class BillingService {
     };
   }
 
-  /** Google refunds unacknowledged purchases after three days, so every paid purchase is acknowledged once. */
+  /**
+   * Google refunds purchases that are not acknowledged within three days, so every purchase that grants access is
+   * acknowledged, only after it has been verified and committed. Acknowledging is safe to repeat: if Google already
+   * has it (for example our earlier call succeeded but its response was lost), the store read reports it and we
+   * simply record it.
+   */
   async acknowledgeIfNeeded(purchase, verified) {
-    if (verified.acknowledged || purchase.acknowledged || purchase.state === "pending" || !isEntitled(purchase.state, purchase.expiresAt)) return;
+    if (purchase.stale) return;
+    if (verified.acknowledged || purchase.acknowledged || !isEntitled(purchase.state, purchase.expiresAt)) return;
     try {
       await this.verifier.acknowledge(purchase.productId, purchase.purchaseToken);
       await this.db.update(purchases).set({ acknowledged: true }).where(eq(purchases.id, purchase.id));
     } catch (err) {
-      // Not fatal: the reconcile job retries acknowledgement.
+      // Not fatal: reconciliation re-reads the purchase (which reports Google's acknowledgement state) and retries.
       this.logger.warn(`acknowledge failed for purchase ${purchase.id}: ${err.message}`);
     }
   }
 
   /**
-   * Records the store state of a purchase and makes subscriptions and entitlements match it, in one transaction.
-   * Entitled states keep one active grant set valid until the paid-through date; any other state deactivates it.
+   * Applies one store answer to a purchase, its subscription and its grants. The only writer of billing state:
+   * verification, restore, notifications and reconciliation all go through here.
+   *
+   * Guarantees:
+   *   - serialized per purchase token (transaction-scoped advisory lock), so concurrent writers cannot interleave;
+   *   - monotonic: an answer requested before the one already applied is discarded (out-of-order replies);
+   *   - terminal states stay terminal (a revoked purchase never grants again);
+   *   - idempotent: rows are written only when the answer changes them, so repeats leave no trace;
+   *   - one subscription per token and one grant per feature, also enforced by unique indexes.
    */
   async applyState(userId, purchaseToken, product, v, reason) {
     const now = new Date();
-    const entitled = isEntitled(v.state, v.expiresAt, now);
+    const fetchedAt = v.fetchedAt instanceof Date ? v.fetchedAt : now;
     const result = await this.db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${"purchase:" + purchaseToken}, 0))`);
+      const [existing] = await tx.select().from(purchases).where(and(eq(purchases.store, "google_play"), eq(purchases.purchaseToken, purchaseToken)));
+
+      // A token that already belongs to another account is never re-pointed or granted twice.
+      if (existing && existing.userId !== userId) throw new PurchaseOwnershipError();
+      // Out of order: newer information has already been applied; this older answer changes nothing.
+      // A refund (terminal state) is never discarded as stale: a newer read cannot un-refund a purchase.
+      if (existing && existing.lastVerifiedAt > fetchedAt && !TERMINAL_STATES.has(v.state)) return { ...existing, stale: true };
+
+      let state = v.state;
+      let expiresAt = v.expiresAt ?? null;
+      if (existing && TERMINAL_STATES.has(existing.state) && state !== existing.state) {
+        state = existing.state;
+        expiresAt = existing.expiresAt;
+      }
+      // A token that a granted replacement (upgrade, downgrade, resubscribe) superseded is finished: a late or stale
+      // answer for the old token must never bring it back next to the new one.
+      if (existing && state !== "expired" && !TERMINAL_STATES.has(state)) {
+        const [successor] = await tx
+          .select({ id: purchases.id })
+          .from(purchases)
+          .where(and(eq(purchases.linkedPurchaseToken, purchaseToken), eq(purchases.userId, userId), sql`${purchases.subscriptionId} is not null`))
+          .limit(1);
+        if (successor) {
+          state = "expired";
+          expiresAt = existing.expiresAt;
+        }
+      }
+      const until = accessUntil(state, expiresAt, now);
+
       const [purchase] = await tx
         .insert(purchases)
         .values({
@@ -242,117 +352,160 @@ export class BillingService {
           purchaseToken,
           linkedPurchaseToken: v.linkedPurchaseToken ?? null,
           orderId: v.orderId ?? null,
-          state: v.state,
+          state,
           autoRenewing: Boolean(v.autoRenewing),
           acknowledged: Boolean(v.acknowledged),
           startedAt: v.startedAt ?? null,
-          expiresAt: v.expiresAt ?? null,
-          lastVerifiedAt: now,
+          expiresAt,
+          lastVerifiedAt: fetchedAt,
           raw: v.raw ?? null,
         })
         .onConflictDoUpdate({
           target: [purchases.store, purchases.purchaseToken],
           set: {
-            state: v.state,
-            orderId: v.orderId ?? null,
+            state,
+            orderId: v.orderId ?? sql`${purchases.orderId}`,
             autoRenewing: Boolean(v.autoRenewing),
             acknowledged: sql`${purchases.acknowledged} or ${Boolean(v.acknowledged)}`,
-            expiresAt: v.expiresAt ?? null,
-            linkedPurchaseToken: v.linkedPurchaseToken ?? null,
-            lastVerifiedAt: now,
-            raw: v.raw ?? null,
+            expiresAt,
+            linkedPurchaseToken: v.linkedPurchaseToken ?? sql`${purchases.linkedPurchaseToken}`,
+            lastVerifiedAt: sql`greatest(${purchases.lastVerifiedAt}, ${fetchedAt})`,
+            raw: v.raw ?? sql`${purchases.raw}`,
             updatedAt: now,
           },
         })
         .returning();
-
-      // The upsert holds the row lock until commit, so this check cannot race: a token that already belongs to
-      // another account is never re-pointed or granted twice (two accounts verifying one token concurrently).
+      // Defence in depth: the lock above already guarantees this.
       if (purchase.userId !== userId) throw new PurchaseOwnershipError();
 
-      // An upgrade, downgrade or resubscribe replaces the old token: its access ends now.
-      if (v.linkedPurchaseToken) {
-        const [old] = await tx
-          .update(purchases)
-          .set({ state: "expired", updatedAt: now })
-          .where(and(eq(purchases.purchaseToken, v.linkedPurchaseToken), eq(purchases.userId, userId)))
-          .returning();
-        if (old?.subscriptionId) await this.setGrants(tx, old.subscriptionId, "expired", null, now);
-      }
+      // A replacement purchase (upgrade, downgrade, resubscribe) ends the token it replaces, but only once the
+      // replacement itself grants access: a pending or failed replacement must not cut off paid access.
+      if (v.linkedPurchaseToken && until) await this.endReplaced(tx, userId, v.linkedPurchaseToken, purchaseToken, now, reason);
 
       let subscriptionId = purchase.subscriptionId;
-      if (!subscriptionId && entitled) {
-        const [sub] = await tx
+      if (!subscriptionId && until) {
+        const [created] = await tx
           .insert(subscriptions)
           .values({
             userId,
             planKey: product.planKey,
-            status: v.state,
+            status: state,
             source: "google_play",
             providerSubscriptionId: purchaseToken,
             startedAt: v.startedAt ?? now,
-            currentPeriodEnd: v.expiresAt ?? null,
+            currentPeriodEnd: until,
           })
+          .onConflictDoNothing()
           .returning();
+        const sub =
+          created ??
+          (await tx.select().from(subscriptions).where(and(eq(subscriptions.source, "google_play"), eq(subscriptions.providerSubscriptionId, purchaseToken))))[0];
         subscriptionId = sub.id;
         const features = await this.entitlements.planFeatures(product.planKey);
-        await tx.insert(entitlements).values(
-          Object.entries(features).map(([featureKey, f]) => ({
-            userId,
-            featureKey,
-            limitValue: f.limitValue,
-            usagePeriod: f.usagePeriod,
-            sourcePlan: product.planKey,
-            sourceSubscriptionId: sub.id,
-            validUntil: v.expiresAt ?? null,
-          })),
-        );
+        const granted = await tx
+          .insert(entitlements)
+          .values(
+            Object.entries(features).map(([featureKey, f]) => ({
+              userId,
+              featureKey,
+              limitValue: f.limitValue,
+              usagePeriod: f.usagePeriod,
+              sourcePlan: product.planKey,
+              sourceSubscriptionId: sub.id,
+              validUntil: until,
+            })),
+          )
+          .onConflictDoNothing()
+          .returning({ id: entitlements.id });
         await tx.update(purchases).set({ subscriptionId }).where(eq(purchases.id, purchase.id));
-        await tx.insert(entitlementAudit).values({
-          userId,
-          action: "grant",
-          after: { planKey: product.planKey, subscriptionId, state: v.state, until: v.expiresAt, reason },
-          actor: `google_play:${reason}`,
-        });
-      } else if (subscriptionId) {
-        await tx
-          .update(subscriptions)
-          .set({
-            status: v.state,
-            currentPeriodEnd: v.expiresAt ?? null,
-            cancelledAt: ["cancelled", "revoked"].includes(v.state) ? sql`coalesce(${subscriptions.cancelledAt}, now())` : null,
-            updatedAt: now,
-          })
-          .where(eq(subscriptions.id, subscriptionId));
-        const changed = await this.setGrants(tx, subscriptionId, entitled ? "active" : v.state === "expired" ? "expired" : "revoked", v.expiresAt, now);
-        if (changed) {
+        if (granted.length) {
           await tx.insert(entitlementAudit).values({
             userId,
-            action: entitled ? "plan_change" : v.state === "expired" ? "expire" : "revoke",
-            after: { planKey: product.planKey, subscriptionId, state: v.state, until: v.expiresAt, reason },
+            action: "grant",
+            after: { planKey: product.planKey, subscriptionId, state, until, reason },
             actor: `google_play:${reason}`,
           });
         }
+      } else if (subscriptionId) {
+        await this.syncSubscription(tx, { userId, subscriptionId, planKey: product.planKey, state, periodEnd: until ?? expiresAt, until, reason, now });
       }
+      await this.fault("beforeCommit");
       return { ...purchase, subscriptionId };
     });
-    await this.entitlements.invalidate(userId);
+    // After commit only: never invalidate for a rolled-back change. A failed invalidation leaves at most one cache
+    // TTL (60 s) of stale access, never indefinite access: resolution also checks valid_until itself.
+    if (!result.stale) await this.entitlements.invalidate(userId);
     return result;
   }
 
-  /** Sets the status (and validity) of every grant of one subscription. Returns the number of rows changed. */
-  async setGrants(tx, subscriptionId, status, validUntil, now) {
-    const rows = await tx
-      .update(entitlements)
+  /**
+   * Makes a subscription row and its grants match a state. Only rows that actually differ are written, and an
+   * audit row is added only when grants change, so replaying the same state is a no-op.
+   */
+  async syncSubscription(tx, { userId, subscriptionId, planKey, state, periodEnd, until, reason, now }) {
+    await tx
+      .update(subscriptions)
       .set({
-        status,
-        validUntil: validUntil ?? sql`${entitlements.validUntil}`,
-        revokedAt: status === "active" ? null : now,
+        status: state,
+        currentPeriodEnd: periodEnd,
+        cancelledAt: ["cancelled", "revoked"].includes(state) ? sql`coalesce(${subscriptions.cancelledAt}, now())` : null,
         updatedAt: now,
       })
-      .where(eq(entitlements.sourceSubscriptionId, subscriptionId))
+      .where(
+        and(
+          eq(subscriptions.id, subscriptionId),
+          sql`(${subscriptions.status} is distinct from ${state} or ${subscriptions.currentPeriodEnd} is distinct from ${periodEnd})`,
+        ),
+      );
+    const grantStatus = until ? "active" : state === "expired" ? "expired" : "revoked";
+    const changed = await tx
+      .update(entitlements)
+      .set({
+        status: grantStatus,
+        validUntil: until ?? sql`${entitlements.validUntil}`,
+        revokedAt: until ? null : sql`coalesce(${entitlements.revokedAt}, ${now})`,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(entitlements.sourceSubscriptionId, subscriptionId),
+          until
+            ? sql`(${entitlements.status} is distinct from ${grantStatus} or ${entitlements.validUntil} is distinct from ${until})`
+            : sql`${entitlements.status} is distinct from ${grantStatus}`,
+        ),
+      )
       .returning({ id: entitlements.id });
-    return rows.length;
+    if (changed.length) {
+      await tx.insert(entitlementAudit).values({
+        userId,
+        action: until ? "plan_change" : state === "expired" ? "expire" : "revoke",
+        after: { planKey, subscriptionId, state, until, reason },
+        actor: `google_play:${reason}`,
+      });
+    }
+    return changed.length;
+  }
+
+  /** Ends the purchase a replacement supersedes (same account only); its records stay for audit. */
+  async endReplaced(tx, userId, oldToken, newToken, now, reason) {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${"purchase:" + oldToken}, 0))`);
+    const [old] = await tx
+      .update(purchases)
+      .set({ state: "expired", updatedAt: now })
+      .where(and(eq(purchases.purchaseToken, oldToken), eq(purchases.userId, userId), sql`${purchases.state} <> 'revoked'`))
+      .returning();
+    if (old?.subscriptionId) {
+      await this.syncSubscription(tx, {
+        userId,
+        subscriptionId: old.subscriptionId,
+        planKey: old.planKey,
+        state: "expired",
+        periodEnd: old.expiresAt,
+        until: null,
+        reason: `${reason}:replaced`,
+        now,
+      });
+    }
   }
 
   /**
@@ -438,6 +591,7 @@ export class BillingService {
           ),
         ),
       )
+      .orderBy(purchases.lastVerifiedAt)
       .limit(500);
     let refreshed = 0;
     let failed = 0;

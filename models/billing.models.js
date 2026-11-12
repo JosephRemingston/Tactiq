@@ -1,4 +1,5 @@
-import { boolean, index, jsonb, pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, index, jsonb, pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { pk, timestamps, tz } from "./_common.js";
 import { users } from "./users.models.js";
 import { subscriptions } from "./entitlements.models.js";
@@ -38,6 +39,9 @@ export const purchases = pgTable(
     unique("purchases_store_token_uq").on(t.store, t.purchaseToken),
     index("purchases_user_idx").on(t.userId, t.createdAt.desc()),
     index("purchases_state_idx").on(t.state, t.expiresAt),
+    check("purchases_state_ck", sql`state in ('pending','active','grace','on_hold','paused','cancelled','expired','revoked')`),
+    index("purchases_order_idx").on(t.store, t.orderId),
+    index("purchases_linked_idx").on(t.linkedPurchaseToken),
   ],
 );
 
@@ -58,5 +62,9 @@ export const billingNotifications = pgTable(
     receivedAt: tz().notNull().defaultNow(),
     processedAt: tz(),
   },
-  (t) => [unique("billing_notifications_message_uq").on(t.store, t.messageId), index("billing_notifications_token_idx").on(t.purchaseToken)],
+  (t) => [
+    unique("billing_notifications_message_uq").on(t.store, t.messageId),
+    index("billing_notifications_token_idx").on(t.purchaseToken),
+    check("billing_notifications_status_ck", sql`status in ('received','processed','ignored','failed')`),
+  ],
 );
