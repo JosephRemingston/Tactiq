@@ -1,8 +1,8 @@
-# Touchline API reference (for building the Android app)
+# Tactiq API reference (for building the Android app)
 
-This document is the contract between the Touchline backend and the Android app. It is written for an engineer or AI agent building the frontend, and is self-contained: every route, request, response shape, error and rule the app needs is here. Response examples are real responses from the running API, shortened where arrays are long (`"… 20 more"` marks a cut).
+This document is the contract between the Tactiq backend and the Android app. It is written for an engineer or AI agent building the frontend, and is self-contained: every route, request, response shape, error and rule the app needs is here. Response examples are real responses from the running API, shortened where arrays are long (`"… 20 more"` marks a cut).
 
-- **App:** Touchline, a fan-first football tactical intelligence app. Fans follow clubs, competitions and players, open a match, and get a plain-language explanation first ("Quick"), with deeper views ("Explore", "Advanced") on demand.
+- **App:** Tactiq, a fan-first football tactical intelligence app. Fans follow clubs, competitions and players, open a match, and get a plain-language explanation first ("Quick"), with deeper views ("Explore", "Advanced") on demand.
 - **Client stack assumed:** Kotlin, Jetpack Compose, Clerk Android SDK for sign-in, Google Play Billing for subscriptions, Google AdMob + UMP for ads.
 - **Base URL:** `https://tactiq.josephremingston.dev`
 - **Format:** JSON over HTTPS. Request bodies are `application/json`. All timestamps are ISO 8601 UTC strings. All ids are UUID strings unless stated otherwise.
@@ -131,7 +131,7 @@ All `x`/`y` values are metres on a 105 × 68 pitch. `x` runs from the acting tea
 
 1. The app signs the user in with the **Clerk Android SDK** (Google sign-in, passkey or email).
 2. For every API call, get the session token from Clerk and send `Authorization: Bearer <token>`.
-3. The **first** authenticated call creates the user's Touchline account automatically (no sign-up endpoint). Call `GET /v1/me` right after sign-in.
+3. The **first** authenticated call creates the user's Tactiq account automatically (no sign-up endpoint). Call `GET /v1/me` right after sign-in.
 4. Sign-out is handled by Clerk on the device; there is no logout endpoint. To end sessions on other devices use `GET /v1/me/sessions` and `DELETE /v1/me/sessions/{sessionId}`.
 
 Access levels used below:
@@ -499,7 +499,7 @@ Public for match-analysis jobs; otherwise only the requester. → `{ "job": { �
 { "concept": { "key": "ppda", "name": "PPDA", "category": "metric",
   "simpleText": "Passes per defensive action: how many passes the opponent makes before you try to win the ball.",
   "exploreText": "Lower PPDA usually means more aggressive pressing.",
-  "advancedText": "Touchline v1: opponent passes in their own 60% / tackles + interceptions + fouls in that area.",
+  "advancedText": "Tactiq v1: opponent passes in their own 60% / tackles + interceptions + fouls in that area.",
   "misconceptions": "PPDA from different sites is directly comparable.",
   "relatedKeys": ["high-press"], "linkedMetricKeys": ["pressing.ppda", "pressing.ppda_incl_pressures"],
   "metrics": [ { "key": "pressing.ppda", "version": 1, "name": "PPDA", "descriptionQuick": "…", "status": "active" } ],

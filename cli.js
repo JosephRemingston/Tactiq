@@ -1,4 +1,4 @@
-// Touchline admin CLI: node cli.js <command> [options]
+// Tactiq admin CLI: node cli.js <command> [options]
 import { parseArgs } from "node:util";
 import { join } from "node:path";
 import { eq, or, sql } from "drizzle-orm";
@@ -12,7 +12,7 @@ import { seed } from "./services/seed.service.js";
 import { services } from "./services/index.js";
 import { workers } from "./workers/index.js";
 
-const HELP = `Touchline admin CLI
+const HELP = `Tactiq admin CLI
 
   db:migrate
       Applies pending SQL migrations from ./migrations.

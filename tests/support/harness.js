@@ -11,7 +11,7 @@ import { TEST_AUTHORIZED_PARTY, TEST_JWT_PUBLIC_KEY, TEST_WEBHOOK_SECRET, signSe
 
 export const DB_URL = process.env.TEST_DATABASE_URL ?? "";
 export const RTDN_TOKEN = "rtdn-test-token";
-export const PACKAGE_NAME = "app.touchline.test";
+export const PACKAGE_NAME = "app.tactiq.test";
 export const FINAL_2022 = "3869685";
 export const FINAL_2018 = "8658";
 

@@ -5,7 +5,7 @@
   "category": "in-possession",
   "simpleText": "How much of the ball a team has.",
   "exploreText": "Possession share is usually measured from passes or time on the ball. Having more of the ball does not guarantee more chances.",
-  "advancedText": "Touchline uses pass-based possession: a team's attempted passes divided by all attempted passes.",
+  "advancedText": "Tactiq uses pass-based possession: a team's attempted passes divided by all attempted passes.",
   "misconceptions": "More possession means a team played better.",
   "relatedKeys": [
    "build-up",
@@ -56,7 +56,7 @@
   "category": "in-possession",
   "simpleText": "A pass that moves the ball a lot closer to the opponent's goal.",
   "exploreText": "A progressive pass gains a meaningful amount of ground towards goal. The distance needed is larger in your own half than near the opponent's box.",
-  "advancedText": "Touchline v1: completed open-play pass reducing distance to goal centre by >= 30 m (own half), >= 15 m (crossing halves) or >= 10 m (opponent half).",
+  "advancedText": "Tactiq v1: completed open-play pass reducing distance to goal centre by >= 30 m (own half), >= 15 m (crossing halves) or >= 10 m (opponent half).",
   "misconceptions": "Every forward pass is progressive.",
   "relatedKeys": [
    "line-breaking-pass",
@@ -73,7 +73,7 @@
   "category": "in-possession",
   "simpleText": "A pass that goes past a line of opposing players.",
   "exploreText": "Line-breaking passes skip a defensive or midfield line, putting the receiver behind those opponents.",
-  "advancedText": "Detecting lines reliably needs player positions (freeze frames or tracking); Touchline will add this with tracking data.",
+  "advancedText": "Detecting lines reliably needs player positions (freeze frames or tracking); Tactiq will add this with tracking data.",
   "misconceptions": null,
   "relatedKeys": [
    "progressive-pass",
@@ -87,7 +87,7 @@
   "category": "space",
   "simpleText": "The channels between the centre and the wings.",
   "exploreText": "The pitch can be split into five vertical lanes. The two between the centre and the wings are the half-spaces, hard to defend because they sit between full-backs and centre-backs.",
-  "advancedText": "Touchline lanes are 13.6 m wide across a 68 m pitch: wide left, half-space left, central, half-space right, wide right.",
+  "advancedText": "Tactiq lanes are 13.6 m wide across a 68 m pitch: wide left, half-space left, central, half-space right, wide right.",
   "misconceptions": null,
   "relatedKeys": [
    "wide-channel",
@@ -121,7 +121,7 @@
   "category": "space",
   "simpleText": "The central area just outside the penalty box.",
   "exploreText": "Getting the ball into zone 14 lets a team shoot, play through balls or combine around the box.",
-  "advancedText": "Touchline v1: x in [70, 87.5) m, y in [22.67, 45.33) m on a 105 x 68 m pitch.",
+  "advancedText": "Tactiq v1: x in [70, 87.5) m, y in [22.67, 45.33) m on a 105 x 68 m pitch.",
   "misconceptions": null,
   "relatedKeys": [
    "half-space",
@@ -169,7 +169,7 @@
   "category": "space",
   "simpleText": "Having more players than the opponent in one area.",
   "exploreText": "Overloads create a free player. Teams often overload one side to then switch play to the other.",
-  "advancedText": "Measuring numerical superiority needs player positions; Touchline infers side preference from progression and xT lanes until tracking arrives.",
+  "advancedText": "Measuring numerical superiority needs player positions; Tactiq infers side preference from progression and xT lanes until tracking arrives.",
   "misconceptions": null,
   "relatedKeys": [
    "half-space",
@@ -238,7 +238,7 @@
   "category": "metric",
   "simpleText": "Passes per defensive action: how many passes the opponent makes before you try to win the ball.",
   "exploreText": "Lower PPDA usually means more aggressive pressing.",
-  "advancedText": "Touchline v1: opponent passes in their own 60% / tackles + interceptions + fouls in that area.",
+  "advancedText": "Tactiq v1: opponent passes in their own 60% / tackles + interceptions + fouls in that area.",
   "misconceptions": "PPDA from different sites is directly comparable.",
   "relatedKeys": [
    "high-press"
@@ -254,7 +254,7 @@
   "category": "transition",
   "simpleText": "Pressing immediately after losing the ball.",
   "exploreText": "Instead of retreating, players attack the ball straight away to win it back before the opponent organises.",
-  "advancedText": "Touchline measures regains within 3, 5 and 8 seconds of losing possession.",
+  "advancedText": "Tactiq measures regains within 3, 5 and 8 seconds of losing possession.",
   "misconceptions": null,
   "relatedKeys": [
    "transition",
@@ -286,7 +286,7 @@
   "category": "transition",
   "simpleText": "The moments right after the ball changes teams.",
   "exploreText": "Transitions are when teams are least organised, so fast attacks and quick regains matter.",
-  "advancedText": "Touchline links transition metrics to possession chains and play patterns.",
+  "advancedText": "Tactiq links transition metrics to possession chains and play patterns.",
   "misconceptions": null,
   "relatedKeys": [
    "counterpress",
@@ -303,7 +303,7 @@
   "category": "metric",
   "simpleText": "How likely a shot is to be a goal.",
   "exploreText": "xG rates each chance from 0 to 1 using its location, angle, body part and situation. Summing xG shows how many goals a team's chances were worth.",
-  "advancedText": "Touchline shows the provider's xG model (StatsBomb). Single-match differences between goals and xG are noisy.",
+  "advancedText": "Tactiq shows the provider's xG model (StatsBomb). Single-match differences between goals and xG are noisy.",
   "misconceptions": "xG predicts the result of a single match.",
   "relatedKeys": [
    "xa",
@@ -445,7 +445,7 @@
   "category": "set-pieces",
   "simpleText": "Corners, free kicks and throw-ins.",
   "exploreText": "Set pieces are rehearsed routines and can be a large share of a team's chances.",
-  "advancedText": "Touchline groups possessions by play pattern (From Corner, From Free Kick, From Throw In).",
+  "advancedText": "Tactiq groups possessions by play pattern (From Corner, From Free Kick, From Throw In).",
   "misconceptions": null,
   "relatedKeys": [
    "xg"
@@ -476,7 +476,7 @@
   "category": "roles",
   "simpleText": "What a player actually did, beyond their listed position.",
   "exploreText": "Two midfielders in the same position can play very different roles, such as ball-winner or playmaker.",
-  "advancedText": "Touchline compares a player's per-90 actions with 14 role archetypes and shows the closest two.",
+  "advancedText": "Tactiq compares a player's per-90 actions with 14 role archetypes and shows the closest two.",
   "misconceptions": null,
   "relatedKeys": [
    "inverted-fullback",
@@ -491,7 +491,7 @@
   "name": "Score state",
   "category": "context",
   "simpleText": "Whether a team was leading, drawing or trailing.",
-  "exploreText": "Teams often change approach depending on the score, so Touchline splits metrics by score state.",
+  "exploreText": "Teams often change approach depending on the score, so Tactiq splits metrics by score state.",
   "advancedText": "Each event is labelled from the goal timeline at the moment it happened.",
   "misconceptions": null,
   "relatedKeys": [],

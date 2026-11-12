@@ -19,7 +19,7 @@ permissions:
 
 # One run at a time; a scheduled run never cancels one that is still working.
 concurrency:
-  group: touchline-jobs
+  group: tactiq-jobs
   cancel-in-progress: false
 
 jobs:

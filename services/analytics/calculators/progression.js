@@ -4,7 +4,7 @@ import { hasEnd, isCarry, isCompleted, isOpenPlayPass, isPass } from "../context
 import { xtDelta, XT_GRID_ID } from "../xt.js";
 import { round } from "./calculator.js";
 /**
- * Touchline v1 progressive action (Wyscout-style thresholds): completed open-play pass or carry that reduces the
+ * Tactiq v1 progressive action (Wyscout-style thresholds): completed open-play pass or carry that reduces the
  * distance to the goal centre by >= 30 m (own half to own half), >= 15 m (own half to opponent half) or >= 10 m
  * (opponent half to opponent half).
  */

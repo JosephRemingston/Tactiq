@@ -1,4 +1,4 @@
-# Touchline API on Netlify: the Express app runs as one function (netlify/functions/api.js).
+# Tactiq API on Netlify: the Express app runs as one function (netlify/functions/api.js).
 # Background jobs do not run here; see .github/workflows/jobs.yml (node worker.js).
 
 [build]

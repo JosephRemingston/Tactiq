@@ -236,13 +236,13 @@
   "coverageLabel": "calculated",
   "descriptionQuick": "Passes that moved the ball significantly towards goal.",
   "descriptionExplore": "Completed open-play passes that brought the ball much closer to the opponent goal.",
-  "descriptionAdvanced": "Touchline v1 (Wyscout-style thresholds): completed open-play pass whose distance to goal centre (105,34) decreases by >= 30 m when start and end are in own half, >= 15 m when crossing halves, >= 10 m when both in opponent half. Set pieces (corner, free kick, throw-in, goal kick, kick-off) excluded.",
+  "descriptionAdvanced": "Tactiq v1 (Wyscout-style thresholds): completed open-play pass whose distance to goal centre (105,34) decreases by >= 30 m when start and end are in own half, >= 15 m when crossing halves, >= 10 m when both in opponent half. Set pieces (corner, free kick, throw-in, goal kick, kick-off) excluded.",
   "formula": "count(progressive passes)",
   "requires": {
    "events": true
   },
   "providerCaveats": {
-   "statsbomb": "Thresholds are Touchline v1; FBref/Opta use different rules, so values are not directly comparable."
+   "statsbomb": "Thresholds are Tactiq v1; FBref/Opta use different rules, so values are not directly comparable."
   },
   "conceptKeys": [
    "progressive-pass"
@@ -327,7 +327,7 @@
   "coverageLabel": "calculated",
   "descriptionQuick": "How often the team found a player in the dangerous area just outside the box.",
   "descriptionExplore": "Completed passes received in zone 14, the central area in front of the penalty box.",
-  "descriptionAdvanced": "Zone 14 (Touchline v1) = x in [70, 87.5) m, y in [22.67, 45.33) m. Count of completed passes ending there.",
+  "descriptionAdvanced": "Zone 14 (Tactiq v1) = x in [70, 87.5) m, y in [22.67, 45.33) m. Count of completed passes ending there.",
   "formula": "count(completed pass end in zone 14)",
   "requires": {
    "events": true
@@ -373,7 +373,7 @@
   "coverageLabel": "calculated",
   "descriptionQuick": "How many passes the opponent was allowed before the team tried to win the ball. Lower usually means more aggressive pressing.",
   "descriptionExplore": "Opponent passes in their own 60% of the pitch divided by the team's tackles, interceptions and fouls in that same area.",
-  "descriptionAdvanced": "Touchline v1: opponent open-play passes attempted with start x <= 63 m (their own 60%) / team defensive actions at x >= 42 m (mirror zone), where defensive actions = Duel(type Tackle, any outcome) + Interception + Foul Committed. Pressure events excluded; see pressing.ppda_incl_pressures.",
+  "descriptionAdvanced": "Tactiq v1: opponent open-play passes attempted with start x <= 63 m (their own 60%) / team defensive actions at x >= 42 m (mirror zone), where defensive actions = Duel(type Tackle, any outcome) + Interception + Foul Committed. Pressure events excluded; see pressing.ppda_incl_pressures.",
   "formula": "opp_passes(own 60%) / def_actions(opp 60%)",
   "requires": {
    "events": true

@@ -432,7 +432,7 @@ describe("Google Play verification", () => {
       if (url.endsWith(":acknowledge")) return new Response("");
       return new Response(JSON.stringify({ subscriptionState: "SUBSCRIPTION_STATE_ACTIVE", lineItems: [{ productId: "pro_monthly" }] }));
     };
-    const v = new GooglePlayVerifier({ packageName: "app.touchline", serviceAccount, fetchImpl });
+    const v = new GooglePlayVerifier({ packageName: "app.tactiq", serviceAccount, fetchImpl });
     expect((await v.getSubscription("tok/../../x?y")).state).toBe("active");
     await v.getSubscription("t2");
     await v.acknowledge("pro_monthly", "t2");
@@ -609,10 +609,10 @@ describe("purchase verifier selection", () => {
       // .env file is read by this test.
       set({ NODE_ENV: "production", NETLIFY: "true", BILLING_FAKE_VERIFIER: "true" });
       expect(getPurchaseVerifier()).toBe(null);
-      set({ GOOGLE_PLAY_PACKAGE_NAME: "app.touchline", GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: serviceAccount });
+      set({ GOOGLE_PLAY_PACKAGE_NAME: "app.tactiq", GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: serviceAccount });
       expect(getPurchaseVerifier()).toBeInstanceOf(GooglePlayVerifier);
 
-      set({ NODE_ENV: "test", NETLIFY: undefined, BILLING_FAKE_VERIFIER: "false", GOOGLE_PLAY_PACKAGE_NAME: "app.touchline", GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: "" });
+      set({ NODE_ENV: "test", NETLIFY: undefined, BILLING_FAKE_VERIFIER: "false", GOOGLE_PLAY_PACKAGE_NAME: "app.tactiq", GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: "" });
       expect(getPurchaseVerifier()).toBe(null); // a package name alone is not enough
     } finally {
       set(saved);
@@ -624,7 +624,7 @@ describe("Google Play client edge cases", () => {
   it("a refused OAuth token request fails the call without leaking anything, and a token without expires_in is cached for an hour", async () => {
     const keys = generateKeyPairSync("rsa", { modulusLength: 2048 });
     const serviceAccount = { client_email: "sa@test.iam.gserviceaccount.com", private_key: keys.privateKey.export({ type: "pkcs8", format: "pem" }) };
-    const refused = new GooglePlayVerifier({ packageName: "app.touchline", serviceAccount, fetchImpl: async () => new Response("denied", { status: 401 }) });
+    const refused = new GooglePlayVerifier({ packageName: "app.tactiq", serviceAccount, fetchImpl: async () => new Response("denied", { status: 401 }) });
     let err;
     try {
       await refused.getSubscription("secret-purchase-token");
@@ -635,7 +635,7 @@ describe("Google Play client edge cases", () => {
 
     let tokenCalls = 0;
     const v = new GooglePlayVerifier({
-      packageName: "app.touchline",
+      packageName: "app.tactiq",
       serviceAccount,
       fetchImpl: async (url) => {
         if (url.startsWith("https://oauth2")) {

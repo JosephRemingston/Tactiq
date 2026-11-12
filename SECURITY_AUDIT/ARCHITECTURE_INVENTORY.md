@@ -1,6 +1,6 @@
 # Architecture inventory
 
-This inventory covers the Touchline backend as it is implemented in this repository on 12 November 2026, after the remediation described in `REMEDIATION_LOG.md`. It was built by reading every source file, tracing each route through its middleware into services and SQL, and confirming behaviour against a running instance on a local database.
+This inventory covers the Tactiq backend as it is implemented in this repository on 12 November 2026, after the remediation described in `REMEDIATION_LOG.md`. It was built by reading every source file, tracing each route through its middleware into services and SQL, and confirming behaviour against a running instance on a local database.
 
 ## 1. What actually runs
 
@@ -181,7 +181,7 @@ No user-controlled value is ever used as a host, scheme or port, so there is no 
 
 ## 7. Database tables and ownership
 
-There are 43 tables. The full column inventory is in `docs/Touchline-Product-and-System-Guide.pdf`, section 4.
+There are 43 tables. The full column inventory is in `docs/Tactiq-Product-and-System-Guide.pdf`, section 4.
 
 | Group | Tables | Ownership |
 |---|---|---|

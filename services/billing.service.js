@@ -102,7 +102,7 @@ export function assertStoreResponse(v) {
  * Google returns it with the purchase, so a token cannot be redeemed by a different account.
  */
 export function obfuscatedAccountId(userId) {
-  return createHash("sha256").update(`touchline:${userId}`).digest("hex");
+  return createHash("sha256").update(`tactiq:${userId}`).digest("hex");
 }
 
 /**
@@ -180,7 +180,7 @@ export class BillingService {
   async verifyPurchase(userId, { productId, purchaseToken }, meta = {}) {
     this.requireConfigured();
     const product = PRODUCTS.get(productId);
-    if (!product) throw ApiError.badRequest("Unknown product", [{ path: "productId", message: "Not a Touchline product" }]);
+    if (!product) throw ApiError.badRequest("Unknown product", [{ path: "productId", message: "Not a Tactiq product" }]);
 
     const [existing] = await this.db.select().from(purchases).where(and(eq(purchases.store, "google_play"), eq(purchases.purchaseToken, purchaseToken)));
     if (existing && existing.userId !== userId) {

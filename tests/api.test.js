@@ -38,7 +38,7 @@ if (!DB_URL) {
     STATSBOMB_RATE_PER_SECOND: "1000",
     BILLING_FAKE_VERIFIER: "true",
     GOOGLE_PLAY_RTDN_TOKEN: RTDN_TOKEN,
-    GOOGLE_PLAY_PACKAGE_NAME: "app.touchline.test",
+    GOOGLE_PLAY_PACKAGE_NAME: "app.tactiq.test",
     GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: "",
     ADMOB_NATIVE_UNIT_ID: "",
     ADMOB_BANNER_UNIT_ID: "",
@@ -94,7 +94,7 @@ if (!DB_URL) {
       body: {
         message: {
           messageId,
-          data: Buffer.from(JSON.stringify({ version: "1.0", packageName: "app.touchline.test", ...notification })).toString("base64"),
+          data: Buffer.from(JSON.stringify({ version: "1.0", packageName: "app.tactiq.test", ...notification })).toString("base64"),
         },
         subscription: "projects/test/subscriptions/rtdn",
       },

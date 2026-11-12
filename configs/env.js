@@ -28,7 +28,7 @@ export const envSchema = z.object({
   STORAGE_FS_ROOT: z.string().default(".data/storage"),
   S3_ENDPOINT: optStr(),
   S3_REGION_OVERRIDE: optStr(),
-  S3_BUCKET_RAW: z.string().default("touchline-raw"),
+  S3_BUCKET_RAW: z.string().default("tactiq-raw"),
   S3_ACCESS_KEY_ID: optStr(),
   S3_SECRET_ACCESS_KEY: optStr(),
   /** Keep the full provider event JSON in Postgres too. Off by default: raw payloads already live in object storage. */
@@ -46,7 +46,7 @@ export const envSchema = z.object({
   STATSBOMB_OPEN_DATA_LOCAL_DIR: optStr(),
   STATSBOMB_COMPETITION_ALLOWLIST: z.string().default("43:106,43:3"),
   STATSBOMB_RATE_PER_SECOND: z.coerce.number().positive().default(2),
-  STATSBOMB_USER_AGENT: z.string().default("Touchline/1.0"),
+  STATSBOMB_USER_AGENT: z.string().default("Tactiq/1.0"),
   SPORTMONKS_API_TOKEN: optStr(),
 
   /** Team season style recompute is debounced: one pending job per team-season. It has the lowest priority, so it runs after the matches. */

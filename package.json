@@ -1,7 +1,7 @@
 {
-  "name": "touchline-api",
+  "name": "tactiq-api",
   "version": "1.0.0",
-  "description": "Touchline football tactical intelligence API (Express)",
+  "description": "Tactiq football tactical intelligence API (Express)",
   "license": "UNLICENSED",
   "private": true,
   "type": "module",

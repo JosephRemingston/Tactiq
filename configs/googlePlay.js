@@ -10,7 +10,7 @@ const ANDROID_PUBLISHER = "https://androidpublisher.googleapis.com/androidpublis
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const SCOPE = "https://www.googleapis.com/auth/androidpublisher";
 
-/** Google subscription states (subscriptionsv2) mapped to Touchline purchase states. */
+/** Google subscription states (subscriptionsv2) mapped to Tactiq purchase states. */
 const STATES = {
   SUBSCRIPTION_STATE_PENDING: "pending",
   SUBSCRIPTION_STATE_ACTIVE: "active",

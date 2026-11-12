@@ -95,7 +95,7 @@ export function createApp() {
   app.use(ipRateLimit);
 
   app.get("/", (req, res) => {
-    return ApiResponse.success(res, "Touchline API", { version: "v1" });
+    return ApiResponse.success(res, "Tactiq API", { version: "v1" });
   });
 
   // /matches/compare must be matched before /matches/:matchId, so analytics is mounted first.

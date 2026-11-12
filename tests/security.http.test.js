@@ -98,15 +98,15 @@ describe("HTTP security controls", { skip: SKIP ?? false }, () => {
     });
 
     it("with an allowlist, only exact origins are granted, and never with credentials", async () => {
-      await withApp({ CORS_ORIGINS: "https://app.touchline.test" }, async (f) => {
-        const ok = await f("/v1/competitions", { headers: { origin: "https://app.touchline.test" } });
-        expect(ok.headers.get("access-control-allow-origin")).toBe("https://app.touchline.test");
+      await withApp({ CORS_ORIGINS: "https://app.tactiq.test" }, async (f) => {
+        const ok = await f("/v1/competitions", { headers: { origin: "https://app.tactiq.test" } });
+        expect(ok.headers.get("access-control-allow-origin")).toBe("https://app.tactiq.test");
         expect(ok.headers.get("access-control-allow-credentials")).toBe(null);
-        for (const origin of ["https://evil.example", "null", "http://app.touchline.test", "https://app.touchline.test.evil.example", "https://sub.app.touchline.test", "https://app.touchline.test:8443"]) {
+        for (const origin of ["https://evil.example", "null", "http://app.tactiq.test", "https://app.tactiq.test.evil.example", "https://sub.app.tactiq.test", "https://app.tactiq.test:8443"]) {
           const res = await f("/v1/competitions", { headers: { origin } });
           expect(res.headers.get("access-control-allow-origin")).toBe(null);
         }
-        const preflight = await f("/v1/me/notes", { method: "OPTIONS", headers: { origin: "https://app.touchline.test", "access-control-request-method": "POST", "access-control-request-headers": "authorization,content-type" } });
+        const preflight = await f("/v1/me/notes", { method: "OPTIONS", headers: { origin: "https://app.tactiq.test", "access-control-request-method": "POST", "access-control-request-headers": "authorization,content-type" } });
         expect(preflight.status).toBe(204);
         expect(preflight.headers.get("access-control-allow-headers")).toContain("Authorization");
         const evilPreflight = await f("/v1/me/notes", { method: "OPTIONS", headers: { origin: "https://evil.example", "access-control-request-method": "DELETE" } });
@@ -115,8 +115,8 @@ describe("HTTP security controls", { skip: SKIP ?? false }, () => {
     });
 
     it("CORS is not authentication: an allowed origin without a token is still a 401", async () => {
-      await withApp({ CORS_ORIGINS: "https://app.touchline.test" }, async (f) => {
-        expect((await f("/v1/me", { headers: { origin: "https://app.touchline.test" } })).status).toBe(401);
+      await withApp({ CORS_ORIGINS: "https://app.tactiq.test" }, async (f) => {
+        expect((await f("/v1/me", { headers: { origin: "https://app.tactiq.test" } })).status).toBe(401);
       });
     });
   });

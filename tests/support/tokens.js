@@ -2,7 +2,7 @@ import { createHmac, generateKeyPairSync, randomBytes, sign } from "node:crypto"
 
 const keys = generateKeyPairSync("rsa", { modulusLength: 2048 });
 export const TEST_JWT_PUBLIC_KEY = keys.publicKey.export({ type: "spki", format: "pem" }).toString();
-export const TEST_AUTHORIZED_PARTY = "https://app.touchline.test";
+export const TEST_AUTHORIZED_PARTY = "https://app.tactiq.test";
 
 const b64 = (v) => (Buffer.isBuffer(v) ? v : Buffer.from(JSON.stringify(v))).toString("base64url");
 
@@ -14,7 +14,7 @@ export function signSessionToken(sub, opts = {}) {
     sub,
     sid: opts.sid ?? `sess_${sub}`,
     azp: opts.azp ?? TEST_AUTHORIZED_PARTY,
-    iss: "https://touchline-test.clerk.accounts.dev",
+    iss: "https://tactiq-test.clerk.accounts.dev",
     iat: now,
     nbf: now - 5,
     exp: now + (opts.expiresInSec ?? 600),

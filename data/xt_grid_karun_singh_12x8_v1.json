@@ -2,7 +2,7 @@
  "id": "karun_singh_12x8_v1",
  "source": "https://karun.in/blog/data/open_xt_12x8_v1.json",
  "reference": "Karun Singh, 'Introducing Expected Threat (xT)', 2018/2019, https://karun.in/blog/expected-threat.html",
- "notes": "Static grid published by the author; fitted on a different event dataset, not on Touchline data. Values are the probability that possession in a cell leads to a goal within the next few actions. Treat derived values as model estimates (coverage label 'inferred').",
+ "notes": "Static grid published by the author; fitted on a different event dataset, not on Tactiq data. Values are the probability that possession in a cell leads to a goal within the next few actions. Treat derived values as model estimates (coverage label 'inferred').",
  "rows": 8,
  "cols": 12,
  "orientation": "grid[row][col]; col 0 = own goal line, col 11 = opponent goal line (attacking +x); rows span pitch width",

@@ -1,6 +1,6 @@
-# Touchline backend
+# Tactiq backend
 
-The API behind the Touchline Android app: football discovery, match centre, fan-readable tactical analysis, the Free/Pro paywall, Google Play subscriptions and ad configuration.
+The API behind the Tactiq Android app: football discovery, match centre, fan-readable tactical analysis, the Free/Pro paywall, Google Play subscriptions and ad configuration.
 
 It is a plain Express app (JavaScript, ES modules). The API runs on Netlify Functions at `https://tactiq.josephremingston.dev`. Background work runs as `node worker.js` on a GitHub Actions schedule.
 

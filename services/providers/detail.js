@@ -1,5 +1,5 @@
 import { uuidv5 } from "../../utils/ids.js";
-/** Deterministic Touchline event id for a provider event. */
+/** Deterministic Tactiq event id for a provider event. */
 export const eventUuid = (provider, providerEventId) => uuidv5(`${provider}:event:${providerEventId}`);
 /**
  * Normalizers emit provider ids in `...ProviderPlayerId` / `...ProviderEventId` / `providerPlayerId` keys.

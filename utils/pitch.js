@@ -49,6 +49,6 @@ export function laneOf(y) {
 export const inBox = (p) => p.x >= PITCH.box.minX && p.y >= PITCH.box.minY && p.y <= PITCH.box.maxY;
 export const inFinalThird = (p) => p.x >= PITCH.thirds.attackingMinX;
 export const inOwnThird = (p) => p.x < PITCH.thirds.defensiveMaxX;
-/** Touchline v1 zone 14: x in [70, 87.5), y in [22.67, 45.33). */
+/** Tactiq v1 zone 14: x in [70, 87.5), y in [22.67, 45.33). */
 export const inZone14 = (p) => p.x >= 70 && p.x < 87.5 && p.y >= 68 / 3 && p.y < (68 * 2) / 3;
 export const thirdOf = (p) => (p.x < 35 ? "defensive" : p.x < 70 ? "middle" : "attacking");

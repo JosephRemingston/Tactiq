@@ -11,7 +11,7 @@ export const isCarry = (e) => e.typeKey === "carry";
 export const isCompleted = (e) => e.outcome === "complete";
 export const isOpenPlayPass = (e) => isPass(e) && !SET_PIECE_PASS_TYPES.has(String(e.detail.passType ?? ""));
 export const isTackle = (e) => e.typeKey === "duel" && e.detail.duelType === "tackle";
-/** PPDA defensive actions (Touchline v1): tackles (any outcome), interceptions, fouls committed. */
+/** PPDA defensive actions (Tactiq v1): tackles (any outcome), interceptions, fouls committed. */
 export const isPpdaDefensiveAction = (e) => isTackle(e) || DEFENSIVE_ACTION_TYPES.has(e.typeKey);
 export const isRegularTime = (e) => e.period <= 4;
 export const isShot = (e) => e.typeKey === "shot" && e.period <= 4;
