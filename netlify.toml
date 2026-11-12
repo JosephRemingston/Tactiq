@@ -1,72 +1,23 @@
-# One Netlify site for both parts of Touchline:
-#   frontend/   static Clerk auth tester (Vite build)  -> served from the CDN
-#   backend/    NestJS API                             -> netlify/functions/api.js (/v1/*, /healthz, /readyz)
-#               BullMQ workers                         -> netlify/functions/worker-background.js (+ worker-tick schedule)
-# Required site environment variables are listed in docs/deploy-netlify.md.
+# Touchline API on Netlify: the Express app runs as one function (netlify/functions/api.js).
+# Background jobs do not run here; see .github/workflows/jobs.yml (node worker.js).
 
 [build]
-  base = "."
-  publish = "frontend/dist"
-  functions = "netlify/functions"
-  command = "sh scripts/netlify-build.sh"
+  publish = "public"
+  command = "echo 'no build step'"
 
 [build.environment]
   NODE_VERSION = "22"
-  NODE_ENV = "production"
-  # Values here apply to the build only. Functions read runtime variables set in the Netlify UI or CLI.
-  # Secret scanning stays on for real secrets (keys, passwords, connection strings). These keys hold plain settings
-  # whose values legitimately appear in code and docs ("production", "neon", "github", the bucket name, the region,
-  # the site origin), and Clerk publishable keys are public by design and ship in the frontend bundle.
-  SECRETS_SCAN_OMIT_KEYS = "VITE_CLERK_PUBLISHABLE_KEY,CLERK_PUBLISHABLE_KEY,NODE_ENV,RUN_MIGRATIONS,STORAGE_DRIVER,S3_BUCKET_RAW,S3_REGION_OVERRIDE,STATSBOMB_SOURCE,STATSBOMB_COMPETITION_ALLOWLIST,CLERK_AUTHORIZED_PARTIES"
-  SECRETS_SCAN_OMIT_PATHS = "backend/test/fixtures/**"
+  # These keys hold plain settings whose values legitimately appear in code and docs.
+  SECRETS_SCAN_OMIT_KEYS = "CLERK_PUBLISHABLE_KEY,VITE_CLERK_PUBLISHABLE_KEY,NODE_ENV,RUN_MIGRATIONS,STORAGE_DRIVER,S3_BUCKET_RAW,S3_REGION_OVERRIDE,STATSBOMB_SOURCE,STATSBOMB_COMPETITION_ALLOWLIST,CLERK_AUTHORIZED_PARTIES"
+  SECRETS_SCAN_OMIT_PATHS = "tests/fixtures/**"
 
 [functions]
-  node_bundler = "nft"
-  # Files read at runtime by path (metric definitions, xT grid, role data, compiled migrations).
-  included_files = ["backend/data/**", "backend/dist/**"]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
 
-[functions."worker-tick"]
-  schedule = "*/10 * * * *"
-
-# API routes go to the function on the same origin, so the browser needs no CORS.
-[[redirects]]
-  from = "/v1/*"
-  to = "/.netlify/functions/api/v1/:splat"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/healthz"
-  to = "/.netlify/functions/api/healthz"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/readyz"
-  to = "/.netlify/functions/api/readyz"
-  status = 200
-  force = true
-
-# Single-page app fallback.
+# Every path goes to the Express app.
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to = "/.netlify/functions/api/:splat"
   status = 200
-
-[[headers]]
-  for = "/assets/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-
-# `netlify dev` / `netlify serve`: serve the built frontend and run the functions locally.
-[dev]
-  framework = "#static"
-  publish = "frontend/dist"
-  port = 8888
-  autoLaunch = false
+  force = true

@@ -1,0 +1,48 @@
+{
+  "_note": "Server-driven AdMob placements (PDF section 6). Change placements here, then redeploy; no app release needed. Pro users never receive ads (feature ads.enabled).",
+  "version": 1,
+  "network": "admob",
+  "placements": [
+    {
+      "key": "home_feed_native",
+      "screen": "home",
+      "format": "native",
+      "unit": "native",
+      "position": { "after": "recent", "every": 6, "first": 4 },
+      "maxPerSession": 3
+    },
+    {
+      "key": "explore_feed_native",
+      "screen": "explore",
+      "format": "native",
+      "unit": "native",
+      "position": { "after": "results", "every": 8, "first": 5 },
+      "maxPerSession": 3
+    },
+    {
+      "key": "match_list_banner",
+      "screen": "matches_list",
+      "format": "banner",
+      "unit": "banner",
+      "position": { "slot": "bottom" },
+      "maxPerSession": 10
+    }
+  ],
+  "adFreeScreens": [
+    "sign_in",
+    "onboarding",
+    "subscription",
+    "payment",
+    "match_story",
+    "match_centre",
+    "match_review",
+    "tactical_pitch",
+    "advanced_analysis",
+    "reports",
+    "privacy",
+    "account_deletion",
+    "settings"
+  ],
+  "frequency": { "minSecondsBetweenAds": 60, "maxPerSession": 6 },
+  "rewardedAds": false
+}

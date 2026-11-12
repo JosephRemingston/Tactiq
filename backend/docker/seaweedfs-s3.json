@@ -1,9 +1,0 @@
-{
-  "identities": [
-    {
-      "name": "touchline-dev",
-      "credentials": [{ "accessKey": "touchline", "secretKey": "touchline-secret" }],
-      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
-    }
-  ]
-}

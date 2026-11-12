@@ -1,0 +1,53 @@
+name: jobs
+
+# Background work for the API: provider sync, match ingestion, analytics, insights, billing reconciliation.
+# The API only writes rows to the ingestion_jobs table; this workflow runs `node worker.js` to process them.
+on:
+  schedule:
+    - cron: "17 * * * *" # every hour: drain queued work (user re-analysis requests, retries, daily billing jobs)
+    - cron: "40 3 * * *" # daily: also sync competitions and matches from the data provider
+  workflow_dispatch:
+    inputs:
+      sync:
+        description: "Sync competitions and matches from the provider first"
+        type: boolean
+        default: false
+
+# One run at a time; a scheduled run never cancels one that is still working.
+concurrency:
+  group: touchline-jobs
+  cancel-in-progress: false
+
+jobs:
+  worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NODE_ENV: production
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      REDIS_URL: ${{ secrets.REDIS_URL }}
+      STORAGE_DRIVER: ${{ vars.STORAGE_DRIVER || 'neon' }}
+      S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+      S3_BUCKET_RAW: ${{ vars.S3_BUCKET_RAW }}
+      S3_REGION_OVERRIDE: ${{ vars.S3_REGION_OVERRIDE }}
+      S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+      S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+      STATSBOMB_SOURCE: github
+      STATSBOMB_COMPETITION_ALLOWLIST: ${{ vars.STATSBOMB_COMPETITION_ALLOWLIST }}
+      GOOGLE_PLAY_PACKAGE_NAME: ${{ vars.GOOGLE_PLAY_PACKAGE_NAME }}
+      GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+      WORKER_BUDGET_MS: "1500000" # 25 minutes, inside the 30-minute job timeout
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --omit=dev
+      - name: Run worker
+        run: |
+          if [ "${{ github.event.schedule }}" = "40 3 * * *" ] || [ "${{ inputs.sync }}" = "true" ]; then
+            node worker.js --sync
+          else
+            node worker.js
+          fi

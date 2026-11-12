@@ -1,14 +1,12 @@
 node_modules/
-dist/
 coverage/
 .env
 .env.local
+.env.netlify
 *.log
 .DS_Store
 .data/
-backend/.statsbomb-cache/
-/football_tactical_intelligence_product_plan.pdf.netlify/
+.statsbomb-cache/
 
 # Local Netlify folder
-/.netlify
-/.env.netlify
+.netlify

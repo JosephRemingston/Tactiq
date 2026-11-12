@@ -1,0 +1,254 @@
+{
+  "_note": "Product hypotheses from PDF section 5, not final pricing. Feature code reads feature keys, never plan names. Move a feature between Free and Pro by editing the values here, then run `node cli.js db:seed`.",
+  "plans": [
+    {
+      "planKey": "free",
+      "name": "Free",
+      "features": {
+        "analysis.matches_per_month": {
+          "limitValue": 20,
+          "usagePeriod": "month"
+        },
+        "analysis.rerun_per_month": {
+          "limitValue": 3,
+          "usagePeriod": "month"
+        },
+        "comparisons.per_month": {
+          "limitValue": 5,
+          "usagePeriod": "month"
+        },
+        "following.max_saved_items": {
+          "limitValue": 100,
+          "usagePeriod": "none"
+        },
+        "history.seasons_back": {
+          "limitValue": 2,
+          "usagePeriod": "none"
+        },
+        "ai.credits_per_month": {
+          "limitValue": 5,
+          "usagePeriod": "month"
+        },
+        "reports.exports_per_month": {
+          "limitValue": 0,
+          "usagePeriod": "month"
+        },
+        "tracking.full_access": {
+          "limitValue": 0,
+          "usagePeriod": "none"
+        },
+        "ads.enabled": {
+          "limitValue": 1,
+          "usagePeriod": "none"
+        },
+        "analysis.advanced_filters": {
+          "limitValue": 0,
+          "usagePeriod": "none"
+        }
+      }
+    },
+    {
+      "planKey": "pro_monthly",
+      "name": "Pro (monthly)",
+      "features": {
+        "analysis.matches_per_month": {
+          "limitValue": null,
+          "usagePeriod": "month"
+        },
+        "analysis.rerun_per_month": {
+          "limitValue": 30,
+          "usagePeriod": "month"
+        },
+        "comparisons.per_month": {
+          "limitValue": null,
+          "usagePeriod": "month"
+        },
+        "following.max_saved_items": {
+          "limitValue": null,
+          "usagePeriod": "none"
+        },
+        "history.seasons_back": {
+          "limitValue": null,
+          "usagePeriod": "none"
+        },
+        "ai.credits_per_month": {
+          "limitValue": 100,
+          "usagePeriod": "month"
+        },
+        "reports.exports_per_month": {
+          "limitValue": 10,
+          "usagePeriod": "month"
+        },
+        "tracking.full_access": {
+          "limitValue": 1,
+          "usagePeriod": "none"
+        },
+        "ads.enabled": {
+          "limitValue": 0,
+          "usagePeriod": "none"
+        },
+        "analysis.advanced_filters": {
+          "limitValue": 1,
+          "usagePeriod": "none"
+        }
+      }
+    },
+    {
+      "planKey": "pro_annual",
+      "name": "Pro (annual)",
+      "features": {
+        "analysis.matches_per_month": {
+          "limitValue": null,
+          "usagePeriod": "month"
+        },
+        "analysis.rerun_per_month": {
+          "limitValue": 30,
+          "usagePeriod": "month"
+        },
+        "comparisons.per_month": {
+          "limitValue": null,
+          "usagePeriod": "month"
+        },
+        "following.max_saved_items": {
+          "limitValue": null,
+          "usagePeriod": "none"
+        },
+        "history.seasons_back": {
+          "limitValue": null,
+          "usagePeriod": "none"
+        },
+        "ai.credits_per_month": {
+          "limitValue": 100,
+          "usagePeriod": "month"
+        },
+        "reports.exports_per_month": {
+          "limitValue": 10,
+          "usagePeriod": "month"
+        },
+        "tracking.full_access": {
+          "limitValue": 1,
+          "usagePeriod": "none"
+        },
+        "ads.enabled": {
+          "limitValue": 0,
+          "usagePeriod": "none"
+        },
+        "analysis.advanced_filters": {
+          "limitValue": 1,
+          "usagePeriod": "none"
+        }
+      }
+    }
+  ],
+  "featureMeta": {
+    "ads.enabled": {
+      "combine": "min",
+      "kind": "boolean"
+    },
+    "tracking.full_access": {
+      "combine": "max",
+      "kind": "boolean"
+    },
+    "analysis.advanced_filters": {
+      "combine": "max",
+      "kind": "boolean"
+    },
+    "history.seasons_back": {
+      "combine": "max",
+      "kind": "count"
+    }
+  },
+  "products": [
+    {
+      "productId": "pro_monthly",
+      "planKey": "pro_monthly",
+      "store": "google_play",
+      "billingPeriod": "P1M"
+    },
+    {
+      "productId": "pro_annual",
+      "planKey": "pro_annual",
+      "store": "google_play",
+      "billingPeriod": "P1Y"
+    }
+  ],
+  "catalogue": [
+    {
+      "group": "Always free",
+      "items": [
+        {
+          "label": "Follow clubs, competitions and players",
+          "free": "Yes",
+          "pro": "Yes"
+        },
+        {
+          "label": "Match centre, timeline, lineups and events",
+          "free": "Yes",
+          "pro": "Yes"
+        },
+        {
+          "label": "Match stories, insight cards and the tactical glossary",
+          "free": "Yes",
+          "pro": "Yes"
+        },
+        {
+          "label": "Team playing style",
+          "free": "Yes",
+          "pro": "Yes"
+        }
+      ]
+    },
+    {
+      "group": "Deeper analysis",
+      "items": [
+        {
+          "label": "Detailed match analytics (metrics, shape, pressing, transitions, possessions, players)",
+          "featureKey": "analysis.matches_per_month",
+          "free": "20 matches a month",
+          "pro": "Unlimited"
+        },
+        {
+          "label": "Team and match comparisons",
+          "featureKey": "comparisons.per_month",
+          "free": "5 a month",
+          "pro": "Unlimited"
+        },
+        {
+          "label": "Re-run match analysis",
+          "featureKey": "analysis.rerun_per_month",
+          "free": "3 a month",
+          "pro": "30 a month"
+        },
+        {
+          "label": "Advanced event and possession filters",
+          "featureKey": "analysis.advanced_filters",
+          "free": "No",
+          "pro": "Yes"
+        },
+        {
+          "label": "Historical seasons",
+          "featureKey": "history.seasons_back",
+          "free": "Latest 2 seasons",
+          "pro": "Full history"
+        },
+        {
+          "label": "Saved matches and insights",
+          "featureKey": "following.max_saved_items",
+          "free": "100",
+          "pro": "Unlimited"
+        }
+      ]
+    },
+    {
+      "group": "Experience",
+      "items": [
+        {
+          "label": "Ads",
+          "featureKey": "ads.enabled",
+          "free": "Light ads in browsing screens",
+          "pro": "No ads"
+        }
+      ]
+    }
+  ]
+}
