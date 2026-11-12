@@ -194,6 +194,9 @@ describe("configuration", () => {
     expect(getEnv({ STATSBOMB_COMPETITION_ALLOWLIST: "" }).STATSBOMB_COMPETITION_ALLOWLIST).toBe("43:106,43:3");
     expect(getEnv({ STATSBOMB_COMPETITION_ALLOWLIST: "  " }).STATSBOMB_COMPETITION_ALLOWLIST).toBe("43:106,43:3");
     expect(getEnv({ STATSBOMB_COMPETITION_ALLOWLIST: "11:90" }).STATSBOMB_COMPETITION_ALLOWLIST).toBe("11:90");
+    // Same for the bucket: "" once produced storage URLs with no bucket and a 400 from the object store.
+    expect(getEnv({ S3_BUCKET_RAW: "" }).S3_BUCKET_RAW).toBe("tactiq-raw");
+    expect(getEnv({ S3_BUCKET_RAW: "tactiq" }).S3_BUCKET_RAW).toBe("tactiq");
   });
 
   it("never loads .env files in a test process", () => {

@@ -28,7 +28,11 @@ export const envSchema = z.object({
   STORAGE_FS_ROOT: z.string().default(".data/storage"),
   S3_ENDPOINT: optStr(),
   S3_REGION_OVERRIDE: optStr(),
-  S3_BUCKET_RAW: z.string().default("tactiq-raw"),
+  /** An empty value (an unset CI variable) means the default; an empty bucket name would build a broken storage URL. */
+  S3_BUCKET_RAW: z
+    .string()
+    .optional()
+    .transform((v) => (v === undefined || v.trim() === "" ? "tactiq-raw" : v)),
   S3_ACCESS_KEY_ID: optStr(),
   S3_SECRET_ACCESS_KEY: optStr(),
   /** Keep the full provider event JSON in Postgres too. Off by default: raw payloads already live in object storage. */
