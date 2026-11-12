@@ -13,7 +13,8 @@ export function signSessionToken(sub, opts = {}) {
   const payload = {
     sub,
     sid: opts.sid ?? `sess_${sub}`,
-    azp: opts.azp ?? TEST_AUTHORIZED_PARTY,
+    // Pass { azp: null } for a native-app token: Clerk adds azp only to requests that carry an Origin header.
+    ...(opts.azp === null ? {} : { azp: opts.azp ?? TEST_AUTHORIZED_PARTY }),
     iss: "https://tactiq-test.clerk.accounts.dev",
     iat: now,
     nbf: now - 5,

@@ -189,6 +189,13 @@ describe("configuration", () => {
     expect(() => getEnv({ DATABASE_URL: "" })).toThrow(/DATABASE_URL/);
   });
 
+  it("an empty provider allowlist means the default seasons, never 'sync nothing'", () => {
+    // An unset CI variable reaches the process as "", which used to sync competitions and then no matches.
+    expect(getEnv({ STATSBOMB_COMPETITION_ALLOWLIST: "" }).STATSBOMB_COMPETITION_ALLOWLIST).toBe("43:106,43:3");
+    expect(getEnv({ STATSBOMB_COMPETITION_ALLOWLIST: "  " }).STATSBOMB_COMPETITION_ALLOWLIST).toBe("43:106,43:3");
+    expect(getEnv({ STATSBOMB_COMPETITION_ALLOWLIST: "11:90" }).STATSBOMB_COMPETITION_ALLOWLIST).toBe("11:90");
+  });
+
   it("never loads .env files in a test process", () => {
     // unitEnv set DATABASE_URL to a local placeholder; a loaded .env would not override it, but would add keys.
     const env = getEnv();

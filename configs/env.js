@@ -44,7 +44,11 @@ export const envSchema = z.object({
   STATSBOMB_SOURCE: z.enum(["github", "local"]).default("github"),
   STATSBOMB_OPEN_DATA_BASE_URL: z.string().default("https://raw.githubusercontent.com/statsbomb/open-data/master/data"),
   STATSBOMB_OPEN_DATA_LOCAL_DIR: optStr(),
-  STATSBOMB_COMPETITION_ALLOWLIST: z.string().default("43:106,43:3"),
+  /** competition:season pairs to sync. An empty value (an unset CI variable arrives as "") means the default, never "sync nothing". */
+  STATSBOMB_COMPETITION_ALLOWLIST: z
+    .string()
+    .optional()
+    .transform((v) => (v === undefined || v.trim() === "" ? "43:106,43:3" : v)),
   STATSBOMB_RATE_PER_SECOND: z.coerce.number().positive().default(2),
   STATSBOMB_USER_AGENT: z.string().default("Tactiq/1.0"),
   SPORTMONKS_API_TOKEN: optStr(),

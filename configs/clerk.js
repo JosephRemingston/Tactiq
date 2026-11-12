@@ -31,12 +31,13 @@ export async function verifySessionToken(token) {
   }
   const parties = authorizedParties();
   // Depending on the SDK release the call resolves to the claims or to { data, errors }; accept both shapes.
+  // The azp check is done below, not by the SDK: the SDK rejects a token with no azp claim whenever a list is
+  // set, and tokens from the native app never carry one (Clerk only adds azp for requests with an Origin).
   let result;
   try {
     result = await verifyToken(token, {
       jwtKey: env.CLERK_JWT_KEY?.replace(/\\n/g, "\n"),
       secretKey: env.CLERK_SECRET_KEY || undefined,
-      authorizedParties: parties.length ? parties : undefined,
       clockSkewInMs: 5000,
     });
   } catch {
@@ -45,6 +46,8 @@ export async function verifySessionToken(token) {
   if (!result || (Array.isArray(result.errors) && result.errors.length)) return null;
   const claims = "data" in result && result.data ? result.data : result;
   if (typeof claims.sub !== "string" || !claims.sub) return null;
+  // A browser token (azp present) must come from an allowed origin. A token without azp is a native-app token.
+  if (claims.azp !== undefined && claims.azp !== null && parties.length && !parties.includes(claims.azp)) return null;
   // Sessions with unfinished tasks (sts = "pending") count as signed out.
   if (claims.sts === "pending") return null;
   return { clerkUserId: claims.sub, sessionId: typeof claims.sid === "string" ? claims.sid : null };

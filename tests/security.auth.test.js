@@ -78,6 +78,13 @@ describe("authentication", { skip: SKIP ?? false }, () => {
     expect(res.body.data.user.id).toBe(owner.id);
   });
 
+  it("a native-app token (no azp claim) is accepted even when authorized parties are set", async () => {
+    // Clerk adds azp only for requests with an Origin header, so the mobile app's tokens never have one.
+    const res = await t.get("/v1/me", { token: t.signSessionToken(owner.clerkId, { azp: null }) });
+    expect(res.status).toBe(200);
+    expect(res.body.data.user.id).toBe(owner.id);
+  });
+
   it("identity comes only from the token: user ids in headers, query or body are ignored or rejected", async () => {
     const other = await t.newUser("authother");
     const viaQuery = await t.get(`/v1/me?userId=${owner.id}`, { token: other.token });
