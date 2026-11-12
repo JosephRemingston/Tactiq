@@ -14,6 +14,9 @@
   NODE_VERSION = "22"
   NODE_ENV = "production"
   # Values here apply to the build only. Functions read runtime variables set in the Netlify UI or CLI.
+  # Clerk publishable keys are public by design and end up in the frontend bundle; don't fail the secret scan on them.
+  SECRETS_SCAN_OMIT_KEYS = "VITE_CLERK_PUBLISHABLE_KEY,CLERK_PUBLISHABLE_KEY"
+  SECRETS_SCAN_OMIT_PATHS = "backend/test/fixtures/**"
 
 [functions]
   node_bundler = "nft"

@@ -10,4 +10,5 @@ backend/.statsbomb-cache/
 /football_tactical_intelligence_product_plan.pdf.netlify/
 
 # Local Netlify folder
-.netlify
+/.netlify
+/.env.netlify
